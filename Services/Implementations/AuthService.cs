@@ -70,8 +70,10 @@ namespace CustomerService.API.Services.Implementations
 
             await _uow.SaveChangesAsync(ct);
 
-            var accessToken = _jwt.GenerateAccessToken(user);
+            User? userModel = await _users.GetByEmailAsync(contact.Email);
+            var accessToken = _jwt.GenerateAccessToken(userModel!);
             var refreshToken = _jwt.GenerateRefreshToken();
+
             var authEntity = new AuthToken
             {
                 UserId = user.UserId,
@@ -80,8 +82,8 @@ namespace CustomerService.API.Services.Implementations
                 ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes),
                 JwtId = Guid.NewGuid().ToString()
             };
-            await _tokens.AddAsync(authEntity, ct);
-            await _uow.SaveChangesAsync(ct);
+            //await _tokens.AddAsync(authEntity, ct);
+           // await _uow.SaveChangesAsync(ct);
 
             await _email.SendAsync(
                 user.Email,
@@ -105,10 +107,11 @@ namespace CustomerService.API.Services.Implementations
                      ?? throw new KeyNotFoundException("Invalid credentials");
 
             var storedHash = Encoding.UTF8.GetString(user.PasswordHash);
+
             if (!_hasher.Verify(storedHash, request.Password))
                 throw new ArgumentException("Invalid credentials");
             if (!user.IsActive)
-                throw new InvalidOperationException("Email not verified");
+                throw new InvalidOperationException("Account not verified");
 
             user.LastLoginAt = DateTime.UtcNow;
             _users.Update(user);
@@ -126,6 +129,16 @@ namespace CustomerService.API.Services.Implementations
             };
             await _tokens.AddAsync(authEntity, ct);
             await _uow.SaveChangesAsync(ct);
+
+            await _email.SendAsync(
+                user.Email,
+                    "You are login successfully",
+                    $"<b>Wellcome back again,</b> {user.FullName}" +
+                    $"<br/>" +
+                    $"<img src=\"https://i.ibb.co/wrJQkw6p/welcomeback.webp\" alt=\"undraw-proud-self-j8xv\" height=\"300px\" width=\"300px\" border=\"0\">" +
+                    $"<br/>" +
+                    $"If want was not you, contact us \"<a href=\"https://ibb.co/3yrSZKKs\">Clik here</a>"
+            );
 
             return new AuthResponseDto
             {

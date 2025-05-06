@@ -16,6 +16,10 @@ using CustomerService.API.Utils;
 using CustomerService.API.Repositories.Implementations;
 using CustomerService.API.Repositories.Interfaces;
 using CustomerService.API.Data.context;
+using HealthChecks.ApplicationStatus.DependencyInjection;
+using HealthChecks.SqlServer;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,10 +120,32 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ? this is the missing line
+builder.Services
+    .AddHealthChecks()
+    .AddApplicationStatus(name: "api_status", tags: new[] { "api" })
+    .AddSqlServer(
+        connectionString: builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "sql",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "db", "sql", "sqlserver" });
+    //.AddSendGrid(apiKey: builder.Configuration["SendGrid:Key"]!, tags: new[] { "email", "sendgrid" })
+    //.AddCheck<ServerHealthCheck>("server_health_check", tags: new[] { "custom", "api" });
+
+builder.Services
+    .AddHealthChecksUI()
+    .AddInMemoryStorage();
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+app.MapGet("/", () => "¡Hola, mundo!");
+app.MapHealthChecks("/healthz", new HealthCheckOptions()
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+app.MapHealthChecksUI();
 
 app.UseSerilogRequestLogging();
 app.UseCors("CorsPolicy");
