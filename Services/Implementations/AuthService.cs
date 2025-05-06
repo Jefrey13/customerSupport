@@ -56,6 +56,7 @@ namespace CustomerService.API.Services.Implementations
                 PasswordHash = Encoding.UTF8.GetBytes(hashedPwd),
                 IsActive = false
             };
+
             await _users.AddAsync(user, ct);
 
             var contact = new Contact
@@ -82,8 +83,8 @@ namespace CustomerService.API.Services.Implementations
                 ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes),
                 JwtId = Guid.NewGuid().ToString()
             };
-            //await _tokens.AddAsync(authEntity, ct);
-           // await _uow.SaveChangesAsync(ct);
+            await _tokens.AddAsync(authEntity, ct);
+            await _uow.SaveChangesAsync(ct);
 
             await _email.SendAsync(
                 user.Email,
