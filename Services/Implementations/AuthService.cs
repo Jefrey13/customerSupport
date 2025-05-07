@@ -89,7 +89,13 @@ namespace CustomerService.API.Services.Implementations
             await _email.SendAsync(
                 user.Email,
                 "Verify your email",
-                $"Click to verify: /api/auth/verify-email?token={authEntity.Token}"
+                $"<b>Click to verify your account:</> " +
+                $"<br/>" +
+                $"<a href=\" /api/auth/verify-email?token={ authEntity.Token}\" >here</>" +
+                $"<br/>" +
+                $"<img src=\"https://i.ibb.co/B2pf6cLp/mail-sent.webp\" alt=\"mail-sent\" width:=\"250\" height=\"250\" border=\"0\"\"/>"+
+                $"<br/>" +
+                $"<em>Si presenta proibleasm o dudas, contactemos en nuestro inbox oficial en: </em> <a href=\"https://localhost:5043\">Contact Us</a>" 
             );
 
             return new AuthResponseDto
@@ -129,7 +135,7 @@ namespace CustomerService.API.Services.Implementations
                 JwtId = Guid.NewGuid().ToString()
             };
             await _tokens.AddAsync(authEntity, ct);
-            await _uow.SaveChangesAsync(ct);
+            //await _uow.SaveChangesAsync(ct);
 
             await _email.SendAsync(
                 user.Email,

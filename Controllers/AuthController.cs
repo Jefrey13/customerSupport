@@ -29,7 +29,6 @@ namespace CustomerService.API.Controllers
                 data: result,
                 message: "Usuario registrado exitosamente."
             );
-            // Si tu RegisterAsync retorna además un ID, podrías devolverlo en routeValues:
             return CreatedAtAction(nameof(Register), routeValues: null, value: response);
         }
 
