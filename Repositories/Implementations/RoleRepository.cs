@@ -7,7 +7,7 @@ namespace CustomerService.API.Repositories.Implementations
 {
     public class RoleRepository : GenericRepository<AppRole>, IRoleRepository
     {
-        public RoleRepository(CustomerSupportDbContext context) : base(context) { }
+        public RoleRepository(CustomerSupportContext context) : base(context) { }
 
         public async Task<AppRole?> GetByNameAsync(string roleName, CancellationToken cancellation = default)
         {

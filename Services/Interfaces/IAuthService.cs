@@ -5,7 +5,7 @@ namespace CustomerService.API.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(RegisterRequest request, CancellationToken cancellation = default);
+        Task RegisterAsync(RegisterRequest request, CancellationToken cancellation = default);
         Task<AuthResponseDto> LoginAsync(LoginRequest request, CancellationToken cancellation = default);
         Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellation = default);
         Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellation = default);

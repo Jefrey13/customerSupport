@@ -7,7 +7,7 @@ namespace CustomerService.API.Repositories.Implementations
 {
     public class AuthTokenRepository : GenericRepository<AuthToken>, IAuthTokenRepository
     {
-        public AuthTokenRepository(CustomerSupportDbContext context) : base(context) { }
+        public AuthTokenRepository(CustomerSupportContext context) : base(context) { }
 
         public async Task<AuthToken?> GetByTokenAsync(string token, CancellationToken cancellation = default)
         {
