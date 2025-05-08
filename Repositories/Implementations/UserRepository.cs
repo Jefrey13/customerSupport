@@ -7,7 +7,7 @@ namespace CustomerService.API.Repositories.Implementations
 {
     public class UserRepository : GenericRepository<User>, IUserRepository
     {
-        public UserRepository(CustomerSupportDbContext context) : base(context) { }
+        public UserRepository(CustomerSupportContext context) : base(context) { }
 
         public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellation = default)
         {

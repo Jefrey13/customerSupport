@@ -5,8 +5,8 @@ namespace CustomerService.API.Repositories.Implementations
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly CustomerSupportDbContext _context;
-        public UnitOfWork(CustomerSupportDbContext context)
+        private readonly CustomerSupportContext _context;
+        public UnitOfWork(CustomerSupportContext context)
         {
             _context = context;
         }

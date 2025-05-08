@@ -7,10 +7,10 @@ namespace CustomerService.API.Repositories.Implementations
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        protected readonly CustomerSupportDbContext _context;
+        protected readonly CustomerSupportContext _context;
         protected readonly DbSet<T> _dbSet;
 
-        public GenericRepository(CustomerSupportDbContext context)
+        public GenericRepository(CustomerSupportContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _dbSet = _context.Set<T>();

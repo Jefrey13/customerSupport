@@ -20,6 +20,7 @@ using HealthChecks.ApplicationStatus.DependencyInjection;
 using HealthChecks.SqlServer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +30,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 builder.Host.UseSerilog();
 
-builder.Services.AddDbContext<CustomerSupportDbContext>(opt =>
+builder.Services.AddDbContext<CustomerSupportContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
@@ -40,7 +41,11 @@ builder.Services.AddCors(o => o.AddPolicy("CorsPolicy", p =>
      .AllowCredentials()
 ));
 
+var jwtSection = builder.Configuration.GetSection("JwtSettings");
+builder.Services.Configure<JwtSettings>(jwtSection);
+
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IAuthTokenRepository, AuthTokenRepository>();
@@ -51,7 +56,7 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 builder.Services.AddTransient<IEmailService, EmailService>();
-builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -70,19 +75,27 @@ builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>()
 builder.Services.AddHealthChecksUI().AddInMemoryStorage();
 
 var jwt = builder.Configuration.GetSection("JwtSettings");
-var key = Encoding.UTF8.GetBytes(jwt["Key"]!);
+var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(opt =>
     {
+        opt.RequireHttpsMetadata = true;
+        opt.SaveToken = true;
         opt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
+            ValidIssuer = jwtSection["Issuer"],
             ValidateAudience = true,
+            ValidAudience = jwtSection["Audience"],
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwt["Issuer"],
-            ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(key)
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            RoleClaimType = ClaimTypes.Role,
+            ClockSkew = TimeSpan.Zero
         };
     });
 
@@ -128,8 +141,6 @@ builder.Services
         name: "sql",
         failureStatus: HealthStatus.Degraded,
         tags: new[] { "db", "sql", "sqlserver" });
-    //.AddSendGrid(apiKey: builder.Configuration["SendGrid:Key"]!, tags: new[] { "email", "sendgrid" })
-    //.AddCheck<ServerHealthCheck>("server_health_check", tags: new[] { "custom", "api" });
 
 builder.Services
     .AddHealthChecksUI()

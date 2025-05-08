@@ -19,18 +19,19 @@ namespace CustomerService.API.Controllers
 
         [HttpPost("register", Name = "Register")]
         [AllowAnonymous]
-        [SwaggerOperation(Summary = "Register a new user and contact")]
-        [ProducesResponseType(typeof(ApiResponse<AuthResponseDto>), StatusCodes.Status201Created)]
+        [SwaggerOperation(Summary = "Register a new user and send verification email")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest req)
         {
-            var result = await _auth.RegisterAsync(req);
-            var response = new ApiResponse<AuthResponseDto>(
-                data: result,
-                message: "Usuario registrado exitosamente."
+            await _auth.RegisterAsync(req);
+            var response = new ApiResponse<object>(
+                data: null,
+                message: "Usuario registrado correctamente. Revisa tu correo para activar la cuenta."
             );
-            return CreatedAtAction(nameof(Register), routeValues: null, value: response);
+            return Created(string.Empty, response);
         }
+
 
         [HttpPost("login", Name = "Login")]
         [AllowAnonymous]

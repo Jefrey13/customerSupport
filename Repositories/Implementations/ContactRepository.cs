@@ -7,7 +7,7 @@ namespace CustomerService.API.Repositories.Implementations
 {
     public class ContactRepository : GenericRepository<Contact>, IContactRepository
     {
-        public ContactRepository(CustomerSupportDbContext context) : base(context) { }
+        public ContactRepository(CustomerSupportContext context) : base(context) { }
 
         public async Task<IEnumerable<Contact>> SearchByCompanyAsync(string company, CancellationToken cancellation = default)
         {
