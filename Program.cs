@@ -20,6 +20,9 @@ using HealthChecks.ApplicationStatus.DependencyInjection;
 using HealthChecks.SqlServer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using CustomerService.API.Delegations;
+using Microsoft.CodeAnalysis.Options;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +43,16 @@ builder.Services.AddCors(o => o.AddPolicy("CorsPolicy", p =>
      .AllowCredentials()
 ));
 
+builder.Services.Configure<GeminiClient>(builder.Configuration.GetSection(("Gemini")));
+builder.Services.AddTransient<GeminiDelegatingHandler>();
+builder.Services.AddHttpClient<GeminiClient>(
+    (serviceProvider, httpClient) =>
+    {
+        var geminiOptions = serviceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
+
+        httpClient.BaseAddress = new Uri(geminiOptions.Url);
+    }).AddHttpMessageHandler<GeminiDelegatingHandler>();
+
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
@@ -54,6 +67,7 @@ builder.Services.AddTransient<IEmailService, EmailService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IGeminiClient, GeminiClient>();
 
 builder.Services.AddMapster();
 
