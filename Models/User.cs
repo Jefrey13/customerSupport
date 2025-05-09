@@ -43,11 +43,15 @@ public partial class User
 
     public virtual ICollection<AuthToken> AuthTokenUsers { get; set; } = new List<AuthToken>();
 
+    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<User> InverseCreatedByNavigation { get; set; } = new List<User>();
 
     public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
+
+    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 

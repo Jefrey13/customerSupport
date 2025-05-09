@@ -18,9 +18,15 @@ public partial class CustomerSupportContext : DbContext
 
     public virtual DbSet<AppRole> AppRoles { get; set; }
 
+    public virtual DbSet<Attachment> Attachments { get; set; }
+
     public virtual DbSet<AuthToken> AuthTokens { get; set; }
 
     public virtual DbSet<Contact> Contacts { get; set; }
+
+    public virtual DbSet<Conversation> Conversations { get; set; }
+
+    public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
@@ -56,6 +62,26 @@ public partial class CustomerSupportContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.AppRoleUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_AppRoles_UpdatedBy_User");
+        });
+
+        modelBuilder.Entity<Attachment>(entity =>
+        {
+            entity.HasKey(e => e.AttachmentId).HasName("PK__Attachme__442C64BEDAB961F6");
+
+            entity.ToTable("Attachments", "chat");
+
+            entity.HasIndex(e => e.MessageId, "IX_Attachments_Message");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.FileName).HasMaxLength(200);
+            entity.Property(e => e.MediaId).HasMaxLength(100);
+            entity.Property(e => e.MediaUrl).HasMaxLength(500);
+            entity.Property(e => e.MimeType).HasMaxLength(100);
+
+            entity.HasOne(d => d.Message).WithMany(p => p.Attachments)
+                .HasForeignKey(d => d.MessageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Attachments_Messages");
         });
 
         modelBuilder.Entity<AuthToken>(entity =>
@@ -105,6 +131,52 @@ public partial class CustomerSupportContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Email).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasKey(e => e.ConversationId).HasName("PK__Conversa__C050D877548C9D1E");
+
+            entity.ToTable("Conversations", "chat");
+
+            entity.HasIndex(e => e.Status, "IX_Conversations_Status");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Bot");
+
+            entity.HasOne(d => d.AssignedAgentNavigation).WithMany(p => p.Conversations)
+                .HasForeignKey(d => d.AssignedAgent)
+                .HasConstraintName("FK_Conversations_Agent");
+
+            entity.HasOne(d => d.Contact).WithMany(p => p.Conversations)
+                .HasForeignKey(d => d.ContactId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Conversations_Contacts");
+        });
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.HasKey(e => e.MessageId).HasName("PK__Messages__C87C0C9C1F92D16D");
+
+            entity.ToTable("Messages", "chat");
+
+            entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_Messages_Conversation_CreatedAt").IsDescending(false, true);
+
+            entity.Property(e => e.Caption).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.MessageType).HasMaxLength(20);
+
+            entity.HasOne(d => d.Conversation).WithMany(p => p.Messages)
+                .HasForeignKey(d => d.ConversationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Messages_Conversations");
+
+            entity.HasOne(d => d.Sender).WithMany(p => p.Messages)
+                .HasForeignKey(d => d.SenderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Messages_Sender");
         });
 
         modelBuilder.Entity<User>(entity =>

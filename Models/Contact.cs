@@ -18,4 +18,6 @@ public partial class Contact
     public string? Country { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 }

@@ -24,8 +24,16 @@ using CustomerService.API.Delegations;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
+using CustomerService.API.Pipelines.Implementations;
+using CustomerService.API.Pipelines.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Services.AddSignalR();
+
+//builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
+//builder.Services.AddScoped<IMessagePipeline, MessagePipeline>();
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -75,6 +83,8 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IGeminiClient, GeminiClient>();
+builder.Services.AddScoped<IMessagePipeline, MessagePipeline>();
+builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 
 builder.Services.AddMapster();
 
@@ -198,6 +208,8 @@ app.UseAuthorization();
 
 app.MapGet("/liveness", () => Results.Ok(new { status = "alive" }))
    .AllowAnonymous();
+
+app.MapHub<CustomerService.API.Utils.ChatHub>("/chatHub");
 
 
 app.MapControllers();
