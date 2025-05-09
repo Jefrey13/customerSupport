@@ -441,3 +441,87 @@ USE [master]
 GO
 ALTER DATABASE [CustomerSupportDB] SET  READ_WRITE 
 GO
+
+
+
+
+
+----
+
+USE [CustomerSupportDB];
+GO
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name='chat')
+  EXEC('CREATE SCHEMA chat');
+GO
+
+-- 1) chat.Conversations
+CREATE TABLE chat.Conversations (
+  ConversationId   INT            IDENTITY(1,1) PRIMARY KEY,
+  ContactId        UNIQUEIDENTIFIER NOT NULL,
+  AssignedAgent    UNIQUEIDENTIFIER NULL,
+  Status           NVARCHAR(20)   NOT NULL DEFAULT 'Bot',
+  CreatedAt        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+  CreatedBy        UNIQUEIDENTIFIER NOT NULL,
+  UpdatedAt        DATETIME2      NULL,
+  UpdatedBy        UNIQUEIDENTIFIER NULL,
+  CONSTRAINT FK_Conversations_Contacts FOREIGN KEY (ContactId)
+    REFERENCES crm.Contacts(ContactId),
+  CONSTRAINT FK_Conversations_Agent     FOREIGN KEY (AssignedAgent)
+    REFERENCES auth.Users(UserId)
+);
+CREATE INDEX IX_Conversations_Status ON chat.Conversations(Status);
+GO
+
+-- 2) chat.Messages
+CREATE TABLE chat.Messages (
+  MessageId        INT            IDENTITY(1,1) PRIMARY KEY,
+  ConversationId   INT            NOT NULL,
+  SenderId         UNIQUEIDENTIFIER NOT NULL,
+  Content          NVARCHAR(MAX)  NULL,
+  MessageType      NVARCHAR(20)   NOT NULL,
+  CreatedAt        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+  CreatedBy        UNIQUEIDENTIFIER NOT NULL,
+  UpdatedAt        DATETIME2      NULL,
+  UpdatedBy        UNIQUEIDENTIFIER NULL,
+  CONSTRAINT FK_Messages_Conversations FOREIGN KEY (ConversationId)
+    REFERENCES chat.Conversations(ConversationId),
+  CONSTRAINT FK_Messages_Sender        FOREIGN KEY (SenderId)
+    REFERENCES auth.Users(UserId)
+);
+CREATE INDEX IX_Messages_Conversation_CreatedAt
+  ON chat.Messages (ConversationId, CreatedAt DESC);
+GO
+
+-- 3) chat.Attachments
+CREATE TABLE chat.Attachments (
+  AttachmentId     INT            IDENTITY(1,1) PRIMARY KEY,
+  MessageId        INT            NOT NULL,
+  Url              NVARCHAR(500)  NOT NULL,
+  MimeType         NVARCHAR(100)  NULL,
+  CreatedAt        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+  CreatedBy        UNIQUEIDENTIFIER NOT NULL,
+  CONSTRAINT FK_Attachments_Messages FOREIGN KEY (MessageId)
+    REFERENCES chat.Messages(MessageId)
+);
+CREATE INDEX IX_Attachments_Message ON chat.Attachments(MessageId);
+GO
+
+
+
+ALTER TABLE chat.Messages
+ADD Caption NVARCHAR(500) NULL;
+GO
+
+
+ALTER TABLE chat.Attachments
+DROP COLUMN Url;
+
+ALTER TABLE chat.Attachments
+ADD 
+  MediaId   NVARCHAR(100) NOT NULL,  -- el ID que devuelve WhatsApp al subir
+  FileName  NVARCHAR(200) NULL;      -- nombre original del fichero
+GO
+
+ALTER TABLE chat.Attachments
+ADD MediaUrl NVARCHAR(500) NULL;
+GO
