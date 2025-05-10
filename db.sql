@@ -1,527 +1,249 @@
-﻿USE [CustomerSupportDB];
+﻿CREATE DATABASE [CustomerSupportDB];
 GO
-
-DECLARE 
-    @UserId       UNIQUEIDENTIFIER = NEWID(),
-    @PasswordHash VARBINARY(256)   = CONVERT(VARBINARY(256), '$2a$12$/rPlTZ25BSBDtA1OUz6al.V1zWwHxXWPxp7A/sZGY8omrAUoeVQkq'),
-    @RoleId       UNIQUEIDENTIFIER = NEWID()
-
--- 1) Insertar el usuario administrador
-INSERT INTO auth.Users 
-    (UserId, FullName, Email, PasswordHash,IsActive, CreatedBy)
-VALUES
-    (
-        @UserId,
-        'Pike Rol',
-        'pikerol393@harinv.com',
-        @PasswordHash,
-		1,
-        @UserId
-    );
-
--- 2) Insertar el rol 'db_role'
-INSERT INTO auth.AppRoles
-    (RoleID ,RoleName, Description, CreatedBy)
-VALUES
-    (
-	@RoleId,
-        'db_role',
-        'Rol de base de datos',
-        @UserId
-    );
-
-
--- 4) Asignar el usuario al rol
-INSERT INTO auth.UserRoles
-    (UserId, RoleId, AssignedBy)
-VALUES
-    (
-        @UserId,
-        @RoleId,
-        @UserId
-    );
-
--- 5) (Opcional) Mapear el login SQL al rol de base de datos:
--- EXEC sp_addrolemember 'db_admin', 'admin_user';
-GO
---pikerol393@harinv.com
---12qw!@QW
-
-/**
-	
-Code	Details
-500
-Undocumented
-Error: response status is 500
-
-Response body
-Download
-{
-  "success": false,
-  "message": "Account not verified",
-  "data": null,
-  "errors": [
-    "Ocurrió un error interno."
-  ]
-}
-*/
-
-
-USE [master]
-GO
-/****** Object:  Database [CustomerSupportDB]    Script Date: 6/5/2025 08:34:00 ******/
-CREATE DATABASE [CustomerSupportDB]
-GO
-ALTER DATABASE [CustomerSupportDB] SET COMPATIBILITY_LEVEL = 150
-GO
-IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
-begin
-EXEC [CustomerSupportDB].[dbo].[sp_fulltext_database] @action = 'enable'
-end
-GO
-ALTER DATABASE [CustomerSupportDB] SET ANSI_NULL_DEFAULT OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET ANSI_NULLS OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET ANSI_PADDING OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET ANSI_WARNINGS OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET ARITHABORT OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET AUTO_CLOSE OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET AUTO_SHRINK OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET AUTO_UPDATE_STATISTICS ON 
-GO
-ALTER DATABASE [CustomerSupportDB] SET CURSOR_CLOSE_ON_COMMIT OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET CURSOR_DEFAULT  GLOBAL 
-GO
-ALTER DATABASE [CustomerSupportDB] SET CONCAT_NULL_YIELDS_NULL OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET NUMERIC_ROUNDABORT OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET QUOTED_IDENTIFIER OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET RECURSIVE_TRIGGERS OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET  ENABLE_BROKER 
-GO
-ALTER DATABASE [CustomerSupportDB] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET DATE_CORRELATION_OPTIMIZATION OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET TRUSTWORTHY OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET ALLOW_SNAPSHOT_ISOLATION OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET PARAMETERIZATION SIMPLE 
-GO
-ALTER DATABASE [CustomerSupportDB] SET READ_COMMITTED_SNAPSHOT OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET HONOR_BROKER_PRIORITY OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET RECOVERY FULL 
-GO
-ALTER DATABASE [CustomerSupportDB] SET  MULTI_USER 
-GO
-ALTER DATABASE [CustomerSupportDB] SET PAGE_VERIFY CHECKSUM  
-GO
-ALTER DATABASE [CustomerSupportDB] SET DB_CHAINING OFF 
-GO
-ALTER DATABASE [CustomerSupportDB] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
-GO
-ALTER DATABASE [CustomerSupportDB] SET TARGET_RECOVERY_TIME = 60 SECONDS 
-GO
-ALTER DATABASE [CustomerSupportDB] SET DELAYED_DURABILITY = DISABLED 
-GO
-ALTER DATABASE [CustomerSupportDB] SET ACCELERATED_DATABASE_RECOVERY = OFF  
-GO
-EXEC sys.sp_db_vardecimal_storage_format N'CustomerSupportDB', N'ON'
-GO
-ALTER DATABASE [CustomerSupportDB] SET QUERY_STORE = OFF
-GO
-USE [CustomerSupportDB]
-GO
-/****** Object:  DatabaseRole [db_client]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE ROLE [db_client]
-GO
-/****** Object:  DatabaseRole [db_agent]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE ROLE [db_agent]
-GO
-/****** Object:  DatabaseRole [db_admin]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE ROLE [db_admin]
-GO
-/****** Object:  Schema [admin]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE SCHEMA [admin]
-GO
-/****** Object:  Schema [auth]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE SCHEMA [auth]
-GO
-/****** Object:  Schema [chat]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE SCHEMA [chat]
-GO
-/****** Object:  Schema [crm]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE SCHEMA [crm]
-GO
-/****** Object:  Table [auth].[UsersHistory]    Script Date: 6/5/2025 08:34:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [auth].[UsersHistory](
-	[UserId] [uniqueidentifier] NOT NULL,
-	[FullName] [nvarchar](100) NOT NULL,
-	[Email] [nvarchar](255) MASKED WITH (FUNCTION = 'email()') NOT NULL,
-	[PasswordHash] [varbinary](256) NOT NULL,
-	[IsActive] [bit] NOT NULL,
-	[SecurityStamp] [uniqueidentifier] NOT NULL,
-	[ConcurrencyStamp] [uniqueidentifier] NOT NULL,
-	[LastLoginAt] [datetime2](7) NULL,
-	[FailedLoginAttempts] [int] NOT NULL,
-	[LockoutEnd] [datetime2](7) NULL,
-	[CreatedBy] [uniqueidentifier] NOT NULL,
-	[CreatedAt] [datetime2](7) NOT NULL,
-	[UpdatedBy] [uniqueidentifier] NULL,
-	[UpdatedAt] [datetime2](7) NULL,
-	[RowVersion] [timestamp] NOT NULL,
-	[ValidFrom] [datetime2](7) NOT NULL,
-	[ValidTo] [datetime2](7) NOT NULL
-) ON [PRIMARY]
-GO
-/****** Object:  Index [ix_UsersHistory]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE CLUSTERED INDEX [ix_UsersHistory] ON [auth].[UsersHistory]
-(
-	[ValidTo] ASC,
-	[ValidFrom] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Table [auth].[Users]    Script Date: 6/5/2025 08:34:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [auth].[Users](
-	[UserId] [uniqueidentifier] NOT NULL,
-	[FullName] [nvarchar](100) NOT NULL,
-	[Email] [nvarchar](255) MASKED WITH (FUNCTION = 'email()') NOT NULL,
-	[PasswordHash] [varbinary](256) NOT NULL,
-	[IsActive] [bit] NOT NULL,
-	[SecurityStamp] [uniqueidentifier] NOT NULL,
-	[ConcurrencyStamp] [uniqueidentifier] NOT NULL,
-	[LastLoginAt] [datetime2](7) NULL,
-	[FailedLoginAttempts] [int] NOT NULL,
-	[LockoutEnd] [datetime2](7) NULL,
-	[CreatedBy] [uniqueidentifier] NOT NULL,
-	[CreatedAt] [datetime2](7) NOT NULL,
-	[UpdatedBy] [uniqueidentifier] NULL,
-	[UpdatedAt] [datetime2](7) NULL,
-	[RowVersion] [timestamp] NOT NULL,
-	[ValidFrom] [datetime2](7) GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
-	[ValidTo] [datetime2](7) GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
- CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED 
-(
-	[UserId] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
-	PERIOD FOR SYSTEM_TIME ([ValidFrom], [ValidTo])
-) ON [PRIMARY]
-WITH
-(
-SYSTEM_VERSIONING = ON ( HISTORY_TABLE = [auth].[UsersHistory] )
-)
-GO
-/****** Object:  Table [auth].[AppRoles]    Script Date: 6/5/2025 08:34:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [auth].[AppRoles](
-	[RoleId] [uniqueidentifier] NOT NULL,
-	[RoleName] [nvarchar](50) NOT NULL,
-	[Description] [nvarchar](200) NULL,
-	[CreatedBy] [uniqueidentifier] NOT NULL,
-	[CreatedAt] [datetime2](7) NOT NULL,
-	[UpdatedBy] [uniqueidentifier] NULL,
-	[UpdatedAt] [datetime2](7) NULL,
-	[RowVersion] [timestamp] NOT NULL,
- CONSTRAINT [PK_AppRoles] PRIMARY KEY CLUSTERED 
-(
-	[RoleId] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [auth].[AuthTokens]    Script Date: 6/5/2025 08:34:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [auth].[AuthTokens](
-	[TokenId] [uniqueidentifier] NOT NULL,
-	[UserId] [uniqueidentifier] NOT NULL,
-	[TokenType] [nvarchar](50) NOT NULL,
-	[JwtId] [nvarchar](100) NULL,
-	[Token] [nvarchar](500) NOT NULL,
-	[CreatedAt] [datetime2](7) NOT NULL,
-	[ExpiresAt] [datetime2](7) NOT NULL,
-	[Revoked] [bit] NOT NULL,
-	[Used] [bit] NOT NULL,
-	[ReplacedByTokenId] [uniqueidentifier] NULL,
-	[IpAddress] [nvarchar](45) NULL,
-	[DeviceInfo] [nvarchar](200) NULL,
-	[CreatedBy] [uniqueidentifier] NOT NULL,
-	[RowVersion] [timestamp] NOT NULL,
- CONSTRAINT [PK_AuthTokens] PRIMARY KEY CLUSTERED 
-(
-	[TokenId] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [auth].[UserRoles]    Script Date: 6/5/2025 08:34:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [auth].[UserRoles](
-	[UserId] [uniqueidentifier] NOT NULL,
-	[RoleId] [uniqueidentifier] NOT NULL,
-	[AssignedAt] [datetime2](7) NOT NULL,
-	[AssignedBy] [uniqueidentifier] NOT NULL,
- CONSTRAINT [PK_UserRoles] PRIMARY KEY CLUSTERED 
-(
-	[UserId] ASC,
-	[RoleId] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [crm].[Contacts]    Script Date: 6/5/2025 08:34:01 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [crm].[Contacts](
-	[ContactId] [uniqueidentifier] NOT NULL,
-	[CompanyName] [nvarchar](150) NOT NULL,
-	[ContactName] [nvarchar](100) NOT NULL,
-	[Email] [nvarchar](255) NOT NULL,
-	[Phone] [nvarchar](20) NULL,
-	[Country] [nvarchar](100) NULL,
-	[CreatedAt] [datetime2](7) NOT NULL,
- CONSTRAINT [PK_Contacts] PRIMARY KEY CLUSTERED 
-(
-	[ContactId] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-SET ANSI_PADDING ON
-GO
-/****** Object:  Index [UQ__AppRoles__8A2B6160ED5D1CEF]    Script Date: 6/5/2025 08:34:01 ******/
-ALTER TABLE [auth].[AppRoles] ADD UNIQUE NONCLUSTERED 
-(
-	[RoleName] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_AuthTokens_Active]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE NONCLUSTERED INDEX [IX_AuthTokens_Active] ON [auth].[AuthTokens]
-(
-	[ExpiresAt] ASC
-)
-WHERE ([Revoked]=(0) AND [Used]=(0))
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-SET ANSI_PADDING ON
-GO
-/****** Object:  Index [IX_AuthTokens_User_Type]    Script Date: 6/5/2025 08:34:01 ******/
-CREATE NONCLUSTERED INDEX [IX_AuthTokens_User_Type] ON [auth].[AuthTokens]
-(
-	[UserId] ASC,
-	[TokenType] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-SET ANSI_PADDING ON
-GO
-/****** Object:  Index [UQ__Users__A9D10534BABBE0AD]    Script Date: 6/5/2025 08:34:01 ******/
-ALTER TABLE [auth].[Users] ADD UNIQUE NONCLUSTERED 
-(
-	[Email] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-ALTER TABLE [auth].[AppRoles] ADD  DEFAULT ('00000000-0000-0000-0000-000000000000') FOR [CreatedBy]
-GO
-ALTER TABLE [auth].[AppRoles] ADD  DEFAULT (sysutcdatetime()) FOR [CreatedAt]
-GO
-ALTER TABLE [auth].[AuthTokens] ADD  DEFAULT (newid()) FOR [TokenId]
-GO
-ALTER TABLE [auth].[AuthTokens] ADD  DEFAULT (sysutcdatetime()) FOR [CreatedAt]
-GO
-ALTER TABLE [auth].[AuthTokens] ADD  DEFAULT ((0)) FOR [Revoked]
-GO
-ALTER TABLE [auth].[AuthTokens] ADD  DEFAULT ((0)) FOR [Used]
-GO
-ALTER TABLE [auth].[AuthTokens] ADD  DEFAULT ('00000000-0000-0000-0000-000000000000') FOR [CreatedBy]
-GO
-ALTER TABLE [auth].[UserRoles] ADD  DEFAULT (sysutcdatetime()) FOR [AssignedAt]
-GO
-ALTER TABLE [auth].[UserRoles] ADD  DEFAULT ('00000000-0000-0000-0000-000000000000') FOR [AssignedBy]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT (newid()) FOR [UserId]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT ((0)) FOR [IsActive]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT (newid()) FOR [SecurityStamp]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT (newid()) FOR [ConcurrencyStamp]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT ((0)) FOR [FailedLoginAttempts]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT ('00000000-0000-0000-0000-000000000000') FOR [CreatedBy]
-GO
-ALTER TABLE [auth].[Users] ADD  DEFAULT (sysutcdatetime()) FOR [CreatedAt]
-GO
-ALTER TABLE [crm].[Contacts] ADD  DEFAULT (newid()) FOR [ContactId]
-GO
-ALTER TABLE [crm].[Contacts] ADD  DEFAULT (sysutcdatetime()) FOR [CreatedAt]
-GO
-ALTER TABLE [auth].[AppRoles]  WITH CHECK ADD  CONSTRAINT [FK_AppRoles_CreatedBy_User] FOREIGN KEY([CreatedBy])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[AppRoles] CHECK CONSTRAINT [FK_AppRoles_CreatedBy_User]
-GO
-ALTER TABLE [auth].[AppRoles]  WITH CHECK ADD  CONSTRAINT [FK_AppRoles_UpdatedBy_User] FOREIGN KEY([UpdatedBy])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[AppRoles] CHECK CONSTRAINT [FK_AppRoles_UpdatedBy_User]
-GO
-ALTER TABLE [auth].[AuthTokens]  WITH CHECK ADD  CONSTRAINT [FK_AuthTokens_CreatedBy_User] FOREIGN KEY([CreatedBy])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[AuthTokens] CHECK CONSTRAINT [FK_AuthTokens_CreatedBy_User]
-GO
-ALTER TABLE [auth].[AuthTokens]  WITH CHECK ADD  CONSTRAINT [FK_AuthTokens_ReplacedBy_Token] FOREIGN KEY([ReplacedByTokenId])
-REFERENCES [auth].[AuthTokens] ([TokenId])
-GO
-ALTER TABLE [auth].[AuthTokens] CHECK CONSTRAINT [FK_AuthTokens_ReplacedBy_Token]
-GO
-ALTER TABLE [auth].[AuthTokens]  WITH CHECK ADD  CONSTRAINT [FK_AuthTokens_Users] FOREIGN KEY([UserId])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[AuthTokens] CHECK CONSTRAINT [FK_AuthTokens_Users]
-GO
-ALTER TABLE [auth].[UserRoles]  WITH CHECK ADD  CONSTRAINT [FK_UserRoles_AssignedBy_User] FOREIGN KEY([AssignedBy])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[UserRoles] CHECK CONSTRAINT [FK_UserRoles_AssignedBy_User]
-GO
-ALTER TABLE [auth].[UserRoles]  WITH CHECK ADD  CONSTRAINT [FK_UserRoles_Roles] FOREIGN KEY([RoleId])
-REFERENCES [auth].[AppRoles] ([RoleId])
-GO
-ALTER TABLE [auth].[UserRoles] CHECK CONSTRAINT [FK_UserRoles_Roles]
-GO
-ALTER TABLE [auth].[UserRoles]  WITH CHECK ADD  CONSTRAINT [FK_UserRoles_Users] FOREIGN KEY([UserId])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[UserRoles] CHECK CONSTRAINT [FK_UserRoles_Users]
-GO
-ALTER TABLE [auth].[Users]  WITH CHECK ADD  CONSTRAINT [FK_Users_CreatedBy_User] FOREIGN KEY([CreatedBy])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[Users] CHECK CONSTRAINT [FK_Users_CreatedBy_User]
-GO
-ALTER TABLE [auth].[Users]  WITH CHECK ADD  CONSTRAINT [FK_Users_UpdatedBy_User] FOREIGN KEY([UpdatedBy])
-REFERENCES [auth].[Users] ([UserId])
-GO
-ALTER TABLE [auth].[Users] CHECK CONSTRAINT [FK_Users_UpdatedBy_User]
-GO
-ALTER TABLE [auth].[AuthTokens]  WITH CHECK ADD  CONSTRAINT [CHK_AuthTokens_Type] CHECK  (([TokenType]='PasswordReset' OR [TokenType]='Verification' OR [TokenType]='Refresh'))
-GO
-ALTER TABLE [auth].[AuthTokens] CHECK CONSTRAINT [CHK_AuthTokens_Type]
-GO
-USE [master]
-GO
-ALTER DATABASE [CustomerSupportDB] SET  READ_WRITE 
-GO
-
-
-
-
-
-----
 
 USE [CustomerSupportDB];
 GO
-IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name='chat')
-  EXEC('CREATE SCHEMA chat');
+
+/****** Database roles ******/
+CREATE ROLE [db_client];
+GO
+CREATE ROLE [db_agent];
+GO
+CREATE ROLE [db_admin];
 GO
 
--- 1) chat.Conversations
-CREATE TABLE chat.Conversations (
-  ConversationId   INT            IDENTITY(1,1) PRIMARY KEY,
-  ContactId        UNIQUEIDENTIFIER NOT NULL,
-  AssignedAgent    UNIQUEIDENTIFIER NULL,
-  Status           NVARCHAR(20)   NOT NULL DEFAULT 'Bot',
-  CreatedAt        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
-  CreatedBy        UNIQUEIDENTIFIER NOT NULL,
-  UpdatedAt        DATETIME2      NULL,
-  UpdatedBy        UNIQUEIDENTIFIER NULL,
-  CONSTRAINT FK_Conversations_Contacts FOREIGN KEY (ContactId)
-    REFERENCES crm.Contacts(ContactId),
-  CONSTRAINT FK_Conversations_Agent     FOREIGN KEY (AssignedAgent)
-    REFERENCES auth.Users(UserId)
-);
-CREATE INDEX IX_Conversations_Status ON chat.Conversations(Status);
+/****** Schemas ******/
+CREATE SCHEMA [admin];
+GO
+CREATE SCHEMA [auth];
+GO
+CREATE SCHEMA [chat];
+GO
+CREATE SCHEMA [crm];
 GO
 
--- 2) chat.Messages
-CREATE TABLE chat.Messages (
-  MessageId        INT            IDENTITY(1,1) PRIMARY KEY,
-  ConversationId   INT            NOT NULL,
-  SenderId         UNIQUEIDENTIFIER NOT NULL,
-  Content          NVARCHAR(MAX)  NULL,
-  MessageType      NVARCHAR(20)   NOT NULL,
-  CreatedAt        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
-  CreatedBy        UNIQUEIDENTIFIER NOT NULL,
-  UpdatedAt        DATETIME2      NULL,
-  UpdatedBy        UNIQUEIDENTIFIER NULL,
-  CONSTRAINT FK_Messages_Conversations FOREIGN KEY (ConversationId)
-    REFERENCES chat.Conversations(ConversationId),
-  CONSTRAINT FK_Messages_Sender        FOREIGN KEY (SenderId)
-    REFERENCES auth.Users(UserId)
-);
-CREATE INDEX IX_Messages_Conversation_CreatedAt
-  ON chat.Messages (ConversationId, CreatedAt DESC);
+/****** Table in crm schema ******/
+-- Companies
+CREATE TABLE [crm].[Companies](
+    [CompanyId] INT IDENTITY(1,1) NOT NULL,
+    [Name] NVARCHAR(150) NOT NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT [PK_Companies] PRIMARY KEY CLUSTERED([CompanyId])
+) ON [PRIMARY];
 GO
 
--- 3) chat.Attachments
-CREATE TABLE chat.Attachments (
-  AttachmentId     INT            IDENTITY(1,1) PRIMARY KEY,
-  MessageId        INT            NOT NULL,
-  Url              NVARCHAR(500)  NOT NULL,
-  MimeType         NVARCHAR(100)  NULL,
-  CreatedAt        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
-  CreatedBy        UNIQUEIDENTIFIER NOT NULL,
-  CONSTRAINT FK_Attachments_Messages FOREIGN KEY (MessageId)
-    REFERENCES chat.Messages(MessageId)
-);
-CREATE INDEX IX_Attachments_Message ON chat.Attachments(MessageId);
+/****** Tables in auth schema ******/
+-- 1) UsersHistory (history table)
+CREATE TABLE [auth].[UsersHistory](
+    [UserId] INT NOT NULL,
+    [FullName] NVARCHAR(100) NOT NULL,
+    [Email] NVARCHAR(255) MASKED WITH (FUNCTION = 'email()') NULL,
+    [PasswordHash] VARBINARY(256) NULL,
+    [IsActive] BIT NOT NULL,
+    [SecurityStamp] UNIQUEIDENTIFIER NOT NULL,
+    [ConcurrencyStamp] UNIQUEIDENTIFIER NOT NULL,
+    [CompanyId] INT NULL,
+    [Phone] NVARCHAR(20) NULL,
+    [Identifier] NVARCHAR(50) NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL,
+    [UpdatedAt] DATETIME2(7) NULL,
+    [RowVersion] TIMESTAMP NOT NULL,
+    [ValidFrom] DATETIME2(7) NOT NULL,
+    [ValidTo] DATETIME2(7) NOT NULL
+) ON [PRIMARY];
+GO
+CREATE CLUSTERED INDEX [ix_UsersHistory] ON [auth].[UsersHistory]([ValidTo],[ValidFrom]);
 GO
 
+-- 2) Users
+CREATE TABLE [auth].[Users](
+    [UserId] INT IDENTITY(1,1) NOT NULL,
+    [FullName] NVARCHAR(100) NOT NULL,
+    [Email] NVARCHAR(255) MASKED WITH (FUNCTION = 'email()') NULL,
+    [PasswordHash] VARBINARY(256) NULL,
+    [IsActive] BIT NOT NULL DEFAULT (0),
+    [SecurityStamp] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [ConcurrencyStamp] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [CompanyId] INT NULL,
+    [Phone] NVARCHAR(20) NULL,
+    [Identifier] NVARCHAR(50) NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    [UpdatedAt] DATETIME2(7) NULL,
+    [RowVersion] TIMESTAMP NOT NULL,
+    [ValidFrom] DATETIME2(7) GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
+    [ValidTo] DATETIME2(7) GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED([UserId]),
+    PERIOD FOR SYSTEM_TIME ([ValidFrom],[ValidTo])
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [auth].[UsersHistory]));
+GO
+ALTER TABLE [auth].[Users]
+    ADD CONSTRAINT FK_Users_Companies FOREIGN KEY([CompanyId]) REFERENCES [crm].[Companies]([CompanyId]);
+GO
 
+-- 3) AppRoles
+CREATE TABLE [auth].[AppRoles](
+    [RoleId] INT IDENTITY(1,1) NOT NULL,
+    [RoleName] NVARCHAR(50) NOT NULL,
+    [Description] NVARCHAR(200) NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    [UpdatedAt] DATETIME2(7) NULL,
+    [RowVersion] TIMESTAMP NOT NULL,
+    CONSTRAINT [PK_AppRoles] PRIMARY KEY CLUSTERED([RoleId])
+) ON [PRIMARY];
+GO
+ALTER TABLE [auth].[AppRoles] ADD CONSTRAINT UQ_AppRoles_RoleName UNIQUE([RoleName]);
+GO
 
-ALTER TABLE chat.Messages
-ADD Caption NVARCHAR(500) NULL;
+-- 4) AuthTokens
+CREATE TABLE [auth].[AuthTokens](
+    [TokenId] INT IDENTITY(1,1) NOT NULL,
+    [UserId] INT NOT NULL,
+    [TokenType] NVARCHAR(50) NOT NULL,
+    [Token] NVARCHAR(500) NOT NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    [ExpiresAt] DATETIME2(7) NOT NULL,
+    [Revoked] BIT NOT NULL DEFAULT (0),
+    [Used] BIT NOT NULL DEFAULT (0),
+    [RowVersion] TIMESTAMP NOT NULL,
+    CONSTRAINT [PK_AuthTokens] PRIMARY KEY CLUSTERED([TokenId])
+) ON [PRIMARY];
+GO
+ALTER TABLE [auth].[AuthTokens]
+    ADD CONSTRAINT FK_AuthTokens_Users FOREIGN KEY([UserId]) REFERENCES [auth].[Users]([UserId]);
+GO
+
+-- 5) UserRoles
+CREATE TABLE [auth].[UserRoles](
+    [UserId] INT NOT NULL,
+    [RoleId] INT NOT NULL,
+    [AssignedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT [PK_UserRoles] PRIMARY KEY CLUSTERED([UserId],[RoleId])
+) ON [PRIMARY];
+GO
+ALTER TABLE [auth].[UserRoles] ADD CONSTRAINT FK_UserRoles_Roles FOREIGN KEY([RoleId]) REFERENCES [auth].[AppRoles]([RoleId]);
+GO
+ALTER TABLE [auth].[UserRoles] ADD CONSTRAINT FK_UserRoles_Users FOREIGN KEY([UserId]) REFERENCES [auth].[Users]([UserId]);
+GO
+
+/****** Tables in chat schema ******/
+-- Conversations
+CREATE TABLE [chat].[Conversations](
+    [ConversationId] INT IDENTITY(1,1) PRIMARY KEY,
+    [CompanyId] INT NULL,
+    [ClientUserId] INT NULL,
+    [AssignedAgent] INT NULL,
+    [AssignedBy] INT NULL,
+    [AssignedAt] DATETIME2(7) NULL,
+    [Status] NVARCHAR(20) NOT NULL DEFAULT 'Bot',
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    [UpdatedAt] DATETIME2(7) NULL,
+    CONSTRAINT FK_Conversations_Companies FOREIGN KEY([CompanyId]) REFERENCES [crm].[Companies]([CompanyId]),
+    CONSTRAINT FK_Conversations_Client FOREIGN KEY([ClientUserId]) REFERENCES [auth].[Users]([UserId]),
+    CONSTRAINT FK_Conversations_Agent FOREIGN KEY([AssignedAgent]) REFERENCES [auth].[Users]([UserId]),
+    CONSTRAINT FK_Conversations_AssignedBy FOREIGN KEY([AssignedBy]) REFERENCES [auth].[Users]([UserId])
+) ON [PRIMARY];
+GO
+
+-- Messages
+CREATE TABLE [chat].[Messages](
+    [MessageId] INT IDENTITY(1,1) PRIMARY KEY,
+    [ConversationId] INT NOT NULL,
+    [SenderId] INT NOT NULL,
+    [Content] NVARCHAR(MAX) NULL,
+    [MessageType] NVARCHAR(20) NOT NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Messages_Conversations FOREIGN KEY([ConversationId]) REFERENCES [chat].[Conversations]([ConversationId]),
+    CONSTRAINT FK_Messages_Sender FOREIGN KEY([SenderId]) REFERENCES [auth].[Users]([UserId])
+) ON [PRIMARY];
+GO
+
+-- Attachments
+CREATE TABLE [chat].[Attachments](
+    [AttachmentId] INT IDENTITY(1,1) PRIMARY KEY,
+    [MessageId] INT NOT NULL,
+    [MediaId] NVARCHAR(100) NOT NULL,
+    [FileName] NVARCHAR(200) NULL,
+    [MediaUrl] NVARCHAR(500) NULL,
+    [CreatedAt] DATETIME2(7) NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Attachments_Messages FOREIGN KEY([MessageId]) REFERENCES [chat].[Messages]([MessageId])
+) ON [PRIMARY];
 GO
 
 
 ALTER TABLE chat.Attachments
-DROP COLUMN Url;
+ADD MimeType NVARCHAR(100) NULL;
 
-ALTER TABLE chat.Attachments
-ADD 
-  MediaId   NVARCHAR(100) NOT NULL,  -- el ID que devuelve WhatsApp al subir
-  FileName  NVARCHAR(200) NULL;      -- nombre original del fichero
+
+
+-- =================================================================================
+-- Seed data: Companies, Roles and Admin User
+-- =================================================================================
+
+-- 1) Insert 6 companies (including PC Group S.A)
+INSERT INTO crm.Companies (Name) VALUES
+  ('PC Group S.A'),
+  ('Distribuidora La Esquina'),
+  ('Panadería El Trigal'),
+  ('Farmacia Vida Sana'),
+  ('Hotel Paraíso Colonial'),
+  ('Librería El Saber');
 GO
 
-ALTER TABLE chat.Attachments
-ADD MediaUrl NVARCHAR(500) NULL;
+-- 2) Insert AppRoles (if not exists)
+INSERT INTO auth.AppRoles (RoleName, Description) VALUES
+  ('Admin',    'System administrator with full access'),
+  ('Customer', 'Client using the platform for service management'),
+  ('Support',  'Customer support personnel in charge of communication');
 GO
+
+-- 3) Insert admin user for PC Group S.A
+DECLARE
+  @AdminUserId INT,
+  @PCGroupId   INT;
+
+-- Assume 'PC Group S.A' entry exists in crm.Companies
+SELECT @PCGroupId = CompanyId
+  FROM crm.Companies
+ WHERE Name = 'PC Group S.A';
+
+INSERT INTO auth.Users (FullName, Email, PasswordHash, IsActive, CompanyId)
+VALUES (
+  'John Administrator',
+  'diviv78453@jazipo.com',
+  CONVERT(VARBINARY(256), '$2a$12$t5dMcFCPdvt.EBXvdb1Kee8tNnVUmJ0QbiMmEtCiR3AHlDiapaQ9m'),
+  1,
+  @PCGroupId
+);
+SET @AdminUserId = SCOPE_IDENTITY();
+
+-- 4) Assign roles to admin (Admin and Support)
+DECLARE
+  @AdminRoleId   INT,
+  @SupportRoleId INT;
+
+SELECT @AdminRoleId   = RoleId FROM auth.AppRoles WHERE RoleName = 'Admin';
+SELECT @SupportRoleId = RoleId FROM auth.AppRoles WHERE RoleName = 'Support';
+
+INSERT INTO auth.UserRoles (UserId, RoleId) VALUES (@AdminUserId, @AdminRoleId);
+INSERT INTO auth.UserRoles (UserId, RoleId) VALUES (@AdminUserId, @SupportRoleId);
+GO
+
+-- Verify inserts
+SELECT * FROM auth.Users;
+SELECT * FROM auth.AppRoles;
+SELECT * FROM auth.UserRoles;
+SELECT * FROM crm.Companies;
+
+
+UPDATE auth.Users SET Email = 'diviv78453@jazipo.com', PasswordHash = CONVERT(VARBINARY(256), '$2a$12$t5dMcFCPdvt.EBXvdb1Kee8tNnVUmJ0QbiMmEtCiR3AHlDiapaQ9m')
+WHERE UserId=1
+
+DELETE FROM auth.UsersHistory WHERE UserId = 2
+
+DELETE FROM auth.UserRoles WHERE UserId = 2
+
+
+DELETE FROM auth.Users WHERE UserId = 2
+
+
+DELETE FROM auth.AuthTokens WHERE UserId = 2

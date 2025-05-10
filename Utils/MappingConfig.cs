@@ -1,4 +1,7 @@
-﻿using CustomerService.API.Dtos.RequestDtos;
+﻿// Utils/MappingConfig.cs
+using System;
+using System.Linq;
+using CustomerService.API.Dtos.RequestDtos;
 using CustomerService.API.Dtos.ResponseDtos;
 using CustomerService.API.Models;
 using Mapster;
@@ -9,44 +12,45 @@ namespace CustomerService.API.Utils
     {
         public void Register(TypeAdapterConfig config)
         {
-            // Register
-            config.NewConfig<RegisterRequest, User>()
+            // CreateUserRequest → User
+            config.NewConfig<CreateUserRequest, User>()
                 .Map(dest => dest.FullName, src => src.FullName)
                 .Map(dest => dest.Email, src => src.Email)
-                .Map(dest => dest.PasswordHash, src => src.Password) // hashed later in service
+                .Map(dest => dest.PasswordHash, src => src.Password) // seguirá el hashing en el service
+                .Map(dest => dest.CompanyId, src => src.CompanyId)
+                .Map(dest => dest.Phone, src => src.Phone)
+                .Map(dest => dest.Identifier, src => src.Identifier)
+                .Map(dest => dest.CreatedAt, src => DateTime.UtcNow)
                 .IgnoreNullValues(true);
 
-            // User ↔ UserDto
+            // User → UserDto
             config.NewConfig<User, UserDto>()
                 .Map(dest => dest.UserId, src => src.UserId)
                 .Map(dest => dest.FullName, src => src.FullName)
                 .Map(dest => dest.Email, src => src.Email)
                 .Map(dest => dest.IsActive, src => src.IsActive)
-                .Map(dest => dest.RoleIds, src => src.UserRoleUsers.Select(ur => ur.RoleId));
+                .Map(dest => dest.CompanyId, src => src.CompanyId)
+                .Map(dest => dest.Phone, src => src.Phone)
+                .Map(dest => dest.Identifier, src => src.Identifier);
 
-            // Role ↔ RoleDto
+            // AppRole → RoleDto
             config.NewConfig<AppRole, RoleDto>()
                 .Map(dest => dest.RoleId, src => src.RoleId)
                 .Map(dest => dest.RoleName, src => src.RoleName)
                 .Map(dest => dest.Description, src => src.Description);
 
-            // Contact ↔ ContactDto
-            config.NewConfig<Contact, ContactDto>()
-                .Map(dest => dest.ContactId, src => src.ContactId)
-                .Map(dest => dest.CompanyName, src => src.CompanyName)
-                .Map(dest => dest.ContactName, src => src.ContactName)
-                .Map(dest => dest.Email, src => src.Email)
-                .Map(dest => dest.Phone, src => src.Phone)
-                .Map(dest => dest.Country, src => src.Country)
+            // Company → CompanyDto
+            config.NewConfig<Company, CompanyDto>()
+                .Map(dest => dest.CompanyId, src => src.CompanyId)
+                .Map(dest => dest.Name, src => src.Name)
                 .Map(dest => dest.CreatedAt, src => src.CreatedAt);
 
-            // AuthResponseDto
-            config.NewConfig<(string access, string refresh, DateTime exp, Guid userId, Guid contactId), AuthResponseDto>()
+            // AuthResponse tuple → AuthResponseDto
+            config.NewConfig<(string access, string refresh, DateTime exp, int userId), AuthResponseDto>()
                 .Map(dest => dest.AccessToken, src => src.access)
                 .Map(dest => dest.RefreshToken, src => src.refresh)
                 .Map(dest => dest.ExpiresAt, src => src.exp)
-                .Map(dest => dest.UserId, src => src.userId)
-                .Map(dest => dest.ContactId, src => src.contactId);
+                .Map(dest => dest.UserId, src => src.userId);
         }
     }
 }

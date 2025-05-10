@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using CustomerService.API.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CustomerService.API.Data.context;
+namespace CustomerService.API.Data.Context;
 
 public partial class CustomerSupportContext : DbContext
 {
@@ -22,7 +22,7 @@ public partial class CustomerSupportContext : DbContext
 
     public virtual DbSet<AuthToken> AuthTokens { get; set; }
 
-    public virtual DbSet<Contact> Contacts { get; set; }
+    public virtual DbSet<Company> Companies { get; set; }
 
     public virtual DbSet<Conversation> Conversations { get; set; }
 
@@ -44,39 +44,26 @@ public partial class CustomerSupportContext : DbContext
 
             entity.ToTable("AppRoles", "auth");
 
-            entity.HasIndex(e => e.RoleName, "UQ__AppRoles__8A2B6160BF809F8E").IsUnique();
+            entity.HasIndex(e => e.RoleName, "UQ_AppRoles_RoleName").IsUnique();
 
-            entity.Property(e => e.RoleId).ValueGeneratedNever();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Description).HasMaxLength(200);
             entity.Property(e => e.RoleName).HasMaxLength(50);
             entity.Property(e => e.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
-
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.AppRoleCreatedByNavigations)
-                .HasForeignKey(d => d.CreatedBy)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_AppRoles_CreatedBy_User");
-
-            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.AppRoleUpdatedByNavigations)
-                .HasForeignKey(d => d.UpdatedBy)
-                .HasConstraintName("FK_AppRoles_UpdatedBy_User");
         });
 
         modelBuilder.Entity<Attachment>(entity =>
         {
-            entity.HasKey(e => e.AttachmentId).HasName("PK__Attachme__442C64BEDAB961F6");
+            entity.HasKey(e => e.AttachmentId).HasName("PK__Attachme__442C64BE0401CF2F");
 
             entity.ToTable("Attachments", "chat");
-
-            entity.HasIndex(e => e.MessageId, "IX_Attachments_Message");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.FileName).HasMaxLength(200);
             entity.Property(e => e.MediaId).HasMaxLength(100);
             entity.Property(e => e.MediaUrl).HasMaxLength(500);
-            entity.Property(e => e.MimeType).HasMaxLength(100);
 
             entity.HasOne(d => d.Message).WithMany(p => p.Attachments)
                 .HasForeignKey(d => d.MessageId)
@@ -90,81 +77,61 @@ public partial class CustomerSupportContext : DbContext
 
             entity.ToTable("AuthTokens", "auth");
 
-            entity.HasIndex(e => e.ExpiresAt, "IX_AuthTokens_Active").HasFilter("([Revoked]=(0) AND [Used]=(0))");
-
-            entity.HasIndex(e => new { e.UserId, e.TokenType }, "IX_AuthTokens_User_Type");
-
-            entity.Property(e => e.TokenId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.DeviceInfo).HasMaxLength(200);
-            entity.Property(e => e.IpAddress).HasMaxLength(45);
-            entity.Property(e => e.JwtId).HasMaxLength(100);
             entity.Property(e => e.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
             entity.Property(e => e.Token).HasMaxLength(500);
             entity.Property(e => e.TokenType).HasMaxLength(50);
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.AuthTokenCreatedByNavigations)
-                .HasForeignKey(d => d.CreatedBy)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_AuthTokens_CreatedBy_User");
-
-            entity.HasOne(d => d.ReplacedByToken).WithMany(p => p.InverseReplacedByToken)
-                .HasForeignKey(d => d.ReplacedByTokenId)
-                .HasConstraintName("FK_AuthTokens_ReplacedBy_Token");
-
-            entity.HasOne(d => d.User).WithMany(p => p.AuthTokenUsers)
+            entity.HasOne(d => d.User).WithMany(p => p.AuthTokens)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_AuthTokens_Users");
         });
 
-        modelBuilder.Entity<Contact>(entity =>
+        modelBuilder.Entity<Company>(entity =>
         {
-            entity.ToTable("Contacts", "crm");
+            entity.ToTable("Companies", "crm");
 
-            entity.Property(e => e.ContactId).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.CompanyName).HasMaxLength(150);
-            entity.Property(e => e.ContactName).HasMaxLength(100);
-            entity.Property(e => e.Country).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.Email).HasMaxLength(255);
-            entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.Name).HasMaxLength(150);
         });
 
         modelBuilder.Entity<Conversation>(entity =>
         {
-            entity.HasKey(e => e.ConversationId).HasName("PK__Conversa__C050D877548C9D1E");
+            entity.HasKey(e => e.ConversationId).HasName("PK__Conversa__C050D877771F928B");
 
             entity.ToTable("Conversations", "chat");
-
-            entity.HasIndex(e => e.Status, "IX_Conversations_Status");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Bot");
 
-            entity.HasOne(d => d.AssignedAgentNavigation).WithMany(p => p.Conversations)
+            entity.HasOne(d => d.AssignedAgentNavigation).WithMany(p => p.ConversationAssignedAgentNavigations)
                 .HasForeignKey(d => d.AssignedAgent)
                 .HasConstraintName("FK_Conversations_Agent");
 
-            entity.HasOne(d => d.Contact).WithMany(p => p.Conversations)
-                .HasForeignKey(d => d.ContactId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Conversations_Contacts");
+            entity.HasOne(d => d.AssignedByNavigation).WithMany(p => p.ConversationAssignedByNavigations)
+                .HasForeignKey(d => d.AssignedBy)
+                .HasConstraintName("FK_Conversations_AssignedBy");
+
+            entity.HasOne(d => d.ClientUser).WithMany(p => p.ConversationClientUsers)
+                .HasForeignKey(d => d.ClientUserId)
+                .HasConstraintName("FK_Conversations_Client");
+
+            entity.HasOne(d => d.Company).WithMany(p => p.Conversations)
+                .HasForeignKey(d => d.CompanyId)
+                .HasConstraintName("FK_Conversations_Companies");
         });
 
         modelBuilder.Entity<Message>(entity =>
         {
-            entity.HasKey(e => e.MessageId).HasName("PK__Messages__C87C0C9C1F92D16D");
+            entity.HasKey(e => e.MessageId).HasName("PK__Messages__C87C0C9CCF00998F");
 
             entity.ToTable("Messages", "chat");
 
-            entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_Messages_Conversation_CreatedAt").IsDescending(false, true);
-
-            entity.Property(e => e.Caption).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.MessageType).HasMaxLength(20);
 
@@ -194,27 +161,21 @@ public partial class CustomerSupportContext : DbContext
                             .HasColumnName("ValidTo");
                     }));
 
-            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534041FF431").IsUnique();
-
-            entity.Property(e => e.UserId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.ConcurrencyStamp).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Email).HasMaxLength(255);
             entity.Property(e => e.FullName).HasMaxLength(100);
+            entity.Property(e => e.Identifier).HasMaxLength(50);
             entity.Property(e => e.PasswordHash).HasMaxLength(256);
+            entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
             entity.Property(e => e.SecurityStamp).HasDefaultValueSql("(newid())");
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.InverseCreatedByNavigation)
-                .HasForeignKey(d => d.CreatedBy)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Users_CreatedBy_User");
-
-            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.InverseUpdatedByNavigation)
-                .HasForeignKey(d => d.UpdatedBy)
-                .HasConstraintName("FK_Users_UpdatedBy_User");
+            entity.HasOne(d => d.Company).WithMany(p => p.Users)
+                .HasForeignKey(d => d.CompanyId)
+                .HasConstraintName("FK_Users_Companies");
         });
 
         modelBuilder.Entity<UserRole>(entity =>
@@ -225,17 +186,12 @@ public partial class CustomerSupportContext : DbContext
 
             entity.Property(e => e.AssignedAt).HasDefaultValueSql("(sysutcdatetime())");
 
-            entity.HasOne(d => d.AssignedByNavigation).WithMany(p => p.UserRoleAssignedByNavigations)
-                .HasForeignKey(d => d.AssignedBy)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UserRoles_AssignedBy_User");
-
             entity.HasOne(d => d.Role).WithMany(p => p.UserRoles)
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserRoles_Roles");
 
-            entity.HasOne(d => d.User).WithMany(p => p.UserRoleUsers)
+            entity.HasOne(d => d.User).WithMany(p => p.UserRoles)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserRoles_Users");

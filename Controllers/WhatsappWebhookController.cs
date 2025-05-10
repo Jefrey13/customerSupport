@@ -24,19 +24,26 @@ namespace CustomerService.API.Controllers
             _verifyToken = config["WhatsApp:VerifyToken"]!;
         }
 
-        [HttpGet("webhook", Name = "VerifyWhatsappWebhook")]
-        [SwaggerOperation(Summary = "Verifica el webhook con WhatsApp Cloud API")]
-        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [HttpGet("webhook")]
         public IActionResult Get(
-            [FromQuery(Name = "hub.mode")] string mode,
-            [FromQuery(Name = "hub.verify_token")] string token,
-            [FromQuery(Name = "hub.challenge")] string challenge)
-        {
-            if (mode == "subscribe" && token == _verifyToken)
-                return Ok(challenge);
-            return Forbid();
-        }
+        [FromQuery(Name = "hub.mode")] string mode,
+        [FromQuery(Name = "hub.verify_token")] string token,
+        [FromQuery(Name = "hub.challenge")] string challenge)
+            {
+                if (mode == "subscribe" && token == _verifyToken)
+                {
+                    // Devuelve sólo el challenge, como texto plano
+                    return new ContentResult
+                    {
+                        Content = challenge,
+                        ContentType = "text/plain",
+                        StatusCode = 200
+                    };
+                }
+
+                return Forbid();
+            }
+
 
         [HttpPost("webhook", Name = "ReceiveWhatsappMessage")]
         [SwaggerOperation(Summary = "Recibe mensajes entrantes de WhatsApp")]

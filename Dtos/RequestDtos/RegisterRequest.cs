@@ -13,17 +13,12 @@ namespace CustomerService.API.Dtos.RequestDtos
         [Required, MinLength(8), MaxLength(100)]
         public string Password { get; set; } = "";
 
-        // Contact data
-        [Required, StringLength(150)]
-        public string CompanyName { get; set; } = "";
-
-        [Required, StringLength(100)]
-        public string ContactName { get; set; } = "";
+        [Required]
+        public int CompanyId { get; set; }
 
         [Phone]
         public string? Phone { get; set; }
 
-        [StringLength(100)]
-        public string? Country { get; set; }
+        public string? Identifier { get; set; }
     }
 }

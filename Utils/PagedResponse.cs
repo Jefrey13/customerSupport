@@ -1,18 +1,24 @@
-﻿namespace CustomerService.API.Utils
-{
-    public class PagedResponse<T> : ApiResponse<IEnumerable<T>>
-    {
-        public int PageNumber { get; init; }
-        public int PageSize { get; init; }
-        public int TotalCount { get; init; }
-        public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+﻿using System.Collections.Generic;
 
-        public PagedResponse(IEnumerable<T> data, int pageNumber, int pageSize, int totalCount)
-            : base(data, "", true)
+namespace CustomerService.API.Utils
+{
+    public class PagedResponse<T>
+    {
+        public IEnumerable<T> Items { get; }
+        public MetaData Meta { get; }
+
+        public PagedResponse(IEnumerable<T> items, MetaData meta)
         {
-            PageNumber = pageNumber;
-            PageSize = pageSize;
-            TotalCount = totalCount;
+            Items = items;
+            Meta = meta;
         }
+    }
+
+    public class MetaData
+    {
+        public int CurrentPage { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+        public int TotalPages { get; set; }
     }
 }

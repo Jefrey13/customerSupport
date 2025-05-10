@@ -5,13 +5,13 @@ namespace CustomerService.API.Models;
 
 public partial class User
 {
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     public string FullName { get; set; } = null!;
 
-    public string Email { get; set; } = null!;
+    public string? Email { get; set; }
 
-    public byte[] PasswordHash { get; set; } = null!;
+    public byte[]? PasswordHash { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -19,43 +19,29 @@ public partial class User
 
     public Guid ConcurrencyStamp { get; set; }
 
-    public DateTime? LastLoginAt { get; set; }
+    public int? CompanyId { get; set; }
 
-    public int FailedLoginAttempts { get; set; }
+    public string? Phone { get; set; }
 
-    public DateTime? LockoutEnd { get; set; }
-
-    public Guid CreatedBy { get; set; }
+    public string? Identifier { get; set; }
 
     public DateTime CreatedAt { get; set; }
-
-    public Guid? UpdatedBy { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
     public byte[] RowVersion { get; set; } = null!;
 
-    public virtual ICollection<AppRole> AppRoleCreatedByNavigations { get; set; } = new List<AppRole>();
+    public virtual ICollection<AuthToken> AuthTokens { get; set; } = new List<AuthToken>();
 
-    public virtual ICollection<AppRole> AppRoleUpdatedByNavigations { get; set; } = new List<AppRole>();
+    public virtual Company? Company { get; set; }
 
-    public virtual ICollection<AuthToken> AuthTokenCreatedByNavigations { get; set; } = new List<AuthToken>();
+    public virtual ICollection<Conversation> ConversationAssignedAgentNavigations { get; set; } = new List<Conversation>();
 
-    public virtual ICollection<AuthToken> AuthTokenUsers { get; set; } = new List<AuthToken>();
+    public virtual ICollection<Conversation> ConversationAssignedByNavigations { get; set; } = new List<Conversation>();
 
-    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
-
-    public virtual User CreatedByNavigation { get; set; } = null!;
-
-    public virtual ICollection<User> InverseCreatedByNavigation { get; set; } = new List<User>();
-
-    public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
+    public virtual ICollection<Conversation> ConversationClientUsers { get; set; } = new List<Conversation>();
 
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
-    public virtual User? UpdatedByNavigation { get; set; }
-
-    public virtual ICollection<UserRole> UserRoleAssignedByNavigations { get; set; } = new List<UserRole>();
-
-    public virtual ICollection<UserRole> UserRoleUsers { get; set; } = new List<UserRole>();
+    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

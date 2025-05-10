@@ -1,17 +1,26 @@
-﻿using CustomerService.API.Utils;
+﻿using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
+using CustomerService.API.Utils;
 
 namespace CustomerService.API.Delegations
 {
-    internal sealed class GeminiDelegatingHandler(IOptions<GeminiOptions> geminiOptions)
-    : DelegatingHandler
+    internal class GeminiDelegatingHandler : DelegatingHandler
     {
-        private readonly GeminiOptions _geminiOptions = geminiOptions.Value;
+        private readonly string _apiKey;
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public GeminiDelegatingHandler(IOptions<GeminiOptions> options)
         {
-            request.Headers.Add("x-goog-api-key", $"{_geminiOptions.ApiKey}");
+            _apiKey = options.Value.ApiKey;
+        }
 
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            // Inyecta la API key en el header
+            request.Headers.Add("x-goog-api-key", _apiKey);
             return base.SendAsync(request, cancellationToken);
         }
     }

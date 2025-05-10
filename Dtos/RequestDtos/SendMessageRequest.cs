@@ -1,14 +1,23 @@
-﻿namespace CustomerService.API.Dtos.RequestDtos
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+
+namespace CustomerService.API.Dtos.RequestDtos
 {
-    /// <summary>
-    /// Datos para que un agente envíe un mensaje (texto o fichero).
-    /// </summary>
     public class SendMessageRequest
     {
-        public Guid SenderId { get; set; }
+        [Required]
+        public int ConversationId { get; set; }
+
+        [Required]
+        public int SenderId { get; set; }
+
         public string? Content { get; set; }
+
+        [Required]
         public string MessageType { get; set; } = "Text";
+
         public string? Caption { get; set; }
+
         public IFormFile? File { get; set; }
     }
 }

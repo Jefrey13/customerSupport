@@ -1,4 +1,7 @@
-﻿namespace CustomerService.API.Pipelines.Interfaces
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace CustomerService.API.Pipelines.Interfaces
 {
     /// <summary>
     /// Orquesta el flujo: DB, IA, WhatsApp y SignalR.
@@ -11,7 +14,7 @@
             string? mediaId,
             string? mimeType,
             string? caption,
-             CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         );
     }
 }

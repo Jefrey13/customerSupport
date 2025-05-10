@@ -1,4 +1,7 @@
+using System;
 using System.Text;
+using System.Linq;
+using System.Threading;
 using AspNetCoreRateLimit;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,35 +18,31 @@ using CustomerService.API.Services.Interfaces;
 using CustomerService.API.Utils;
 using CustomerService.API.Repositories.Implementations;
 using CustomerService.API.Repositories.Interfaces;
-using CustomerService.API.Data.context;
 using HealthChecks.ApplicationStatus.DependencyInjection;
 using HealthChecks.SqlServer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using CustomerService.API.Delegations;
-using Microsoft.CodeAnalysis.Options;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CustomerService.API.Pipelines.Implementations;
 using CustomerService.API.Pipelines.Interfaces;
+using CustomerService.API.Data.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-builder.Services.AddSignalR();
-
-//builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
-//builder.Services.AddScoped<IMessagePipeline, MessagePipeline>();
-
+// --------------------- Serilog ---------------------
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .CreateLogger();
 builder.Host.UseSerilog();
 
+// --------------------- DbContext ---------------------
 builder.Services.AddDbContext<CustomerSupportContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// --------------------- CORS ---------------------
 var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(o => o.AddPolicy("CorsPolicy", p =>
     p.WithOrigins(origins!)
@@ -52,87 +51,116 @@ builder.Services.AddCors(o => o.AddPolicy("CorsPolicy", p =>
      .AllowCredentials()
 ));
 
+// --------------------- HttpClients ---------------------
+// 1) Vincula tu sección "Gemini" a GeminiOptions
+builder.Services.Configure<GeminiOptions>(
+    builder.Configuration.GetSection("Gemini"));
 
-builder.Services.Configure<GeminiClient>(builder.Configuration.GetSection(("Gemini")));
+// 2) Registra el DelegatingHandler que inyecta el header
 builder.Services.AddTransient<GeminiDelegatingHandler>();
-builder.Services.AddHttpClient<GeminiClient>(
-    (serviceProvider, httpClient) =>
-    {
-        var geminiOptions = serviceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
 
-        httpClient.BaseAddress = new Uri(geminiOptions.Url);
-    }).AddHttpMessageHandler<GeminiDelegatingHandler>();
+// 3) Configura el HttpClient para IGeminiClient
+//    - BaseAddress = host de Google
+//    - El handler añadirá el header x-goog-api-key
+builder.Services.AddHttpClient<IGeminiClient, GeminiClient>(client =>
+{
+    client.BaseAddress = new Uri("https://generativelanguage.googleapis.com");
+})
+.AddHttpMessageHandler<GeminiDelegatingHandler>();
 
+
+// --------------------- Jwt Settings ---------------------
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
 builder.Services.Configure<JwtSettings>(jwtSection);
+var keyBytes = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
 
-
+// --------------------- Repositories & UoW ---------------------
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IAuthTokenRepository, AuthTokenRepository>();
-builder.Services.AddScoped<IContactRepository, ContactRepository>();
+builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
+builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
+builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-
-builder.Services.AddTransient<IEmailService, EmailService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
+// --------------------- Application Services ---------------------
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IConversationService, ConversationService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddTransient<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IGeminiClient, GeminiClient>();
-builder.Services.AddScoped<IMessagePipeline, MessagePipeline>();
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
+builder.Services.AddScoped<IMessagePipeline, MessagePipeline>();
 
+// --------------------- Mapster ---------------------
 builder.Services.AddMapster();
 
+// --------------------- Response Caching & Compression ---------------------
 builder.Services.AddMemoryCache();
 builder.Services.AddResponseCaching();
 builder.Services.AddResponseCompression();
 
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddTransient<IEmailService, EmailService>();
+
+// --------------------- Rate Limiting ---------------------
 builder.Services.AddOptions();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-
+// --------------------- Health Checks & UI ---------------------
+builder.Services.AddHealthChecks()
+    .AddApplicationStatus("api_status", tags: new[] { "api" })
+    .AddSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "sql",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "db", "sql", "sqlserver" }
+    );
 builder.Services.AddHealthChecksUI().AddInMemoryStorage();
 
-var jwt = builder.Configuration.GetSection("JwtSettings");
-var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+// --------------------- SignalR ---------------------
+builder.Services.AddSignalR();
 
-builder.Services
-    .AddAuthentication(options =>
+// --------------------- Authentication & Authorization ---------------------
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(opt =>
+{
+    opt.RequireHttpsMetadata = true;
+    opt.SaveToken = true;
+    opt.TokenValidationParameters = new TokenValidationParameters
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(opt =>
-    {
-        opt.RequireHttpsMetadata = true;
-        opt.SaveToken = true;
-        opt.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtSection["Issuer"],
-            ValidateAudience = true,
-            ValidAudience = jwtSection["Audience"],
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            RoleClaimType = ClaimTypes.Role,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
+        ValidateIssuer = true,
+        ValidIssuer = jwtSection["Issuer"],
+        ValidateAudience = true,
+        ValidAudience = jwtSection["Audience"],
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        RoleClaimType = ClaimTypes.Role,
+        ClockSkew = TimeSpan.Zero
+    };
+});
 
 builder.Services.AddAuthorization(opts =>
 {
-    opts.AddPolicy("AdminPolicy", p => p.RequireRole("db_admin"));
-    opts.AddPolicy("AgentPolicy", p => p.RequireRole("db_agent"));
-    opts.AddPolicy("ClientPolicy", p => p.RequireRole("db_client"));
+    opts.AddPolicy("AdminPolicy", p => p.RequireRole("Admin"));
+    opts.AddPolicy("AgentPolicy", p => p.RequireRole("Support"));
+    opts.AddPolicy("ClientPolicy", p => p.RequireRole("Customer"));
 });
 
+// --------------------- Swagger ---------------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -145,9 +173,10 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        Description = "Enter 'Bearer {token}'"
+        Description = "Usa: Bearer {token}"
     });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
         {
             new OpenApiSecurityScheme {
                 Reference = new OpenApiReference {
@@ -155,36 +184,17 @@ builder.Services.AddSwaggerGen(c =>
                     Id   = "Bearer"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
 
-builder.Services
-    .AddHealthChecks()
-    .AddApplicationStatus(name: "api_status", tags: new[] { "api" })
-    .AddSqlServer(
-        connectionString: builder.Configuration.GetConnectionString("DefaultConnection")!,
-        name: "sql",
-        failureStatus: HealthStatus.Degraded,
-        tags: new[] { "db", "sql", "sqlserver" });
-
-builder.Services
-    .AddHealthChecksUI()
-    .AddInMemoryStorage();
-
+// --------------------- Controllers ---------------------
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-app.MapGet("/", () => "¡Hola, mundo!");
-app.MapHealthChecks("/healthz", new HealthCheckOptions()
-{
-    Predicate = _ => true,
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
-app.MapHealthChecksUI();
-
+// --------------------- Middleware Pipeline ---------------------
 app.UseSerilogRequestLogging();
 app.UseCors("CorsPolicy");
 
@@ -195,7 +205,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseResponseCompression();
 app.UseResponseCaching();
 app.UseIpRateLimiting();
@@ -206,12 +215,22 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Liveness
 app.MapGet("/liveness", () => Results.Ok(new { status = "alive" }))
    .AllowAnonymous();
 
-app.MapHub<CustomerService.API.Utils.ChatHub>("/chatHub");
+// Health endpoints
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+app.MapHealthChecksUI();
 
+// SignalR hub
+app.MapHub<ChatHub>("/chatHub");
 
+// API controllers
 app.MapControllers();
 
 app.Run();

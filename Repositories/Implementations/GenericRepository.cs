@@ -1,6 +1,7 @@
-﻿using CustomerService.API.Data.context;
+﻿using CustomerService.API.Data.Context;
 using CustomerService.API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Linq.Expressions;
 
 namespace CustomerService.API.Repositories.Implementations
@@ -19,10 +20,10 @@ namespace CustomerService.API.Repositories.Implementations
         public IQueryable<T> GetAll() =>
             _dbSet.AsNoTracking();
 
-        public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellation = default)
+        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellation = default)
         {
-            if (id == Guid.Empty) throw new ArgumentException(nameof(id));
-            return await _dbSet.FindAsync(new object[] { id }, cancellation).AsTask();
+            if (id <= 0) throw new ArgumentException("El id debe ser mayor que cero", nameof(id));
+            return await _dbSet.FindAsync(new object[] { id }, cancellation);
         }
 
         public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellation = default)

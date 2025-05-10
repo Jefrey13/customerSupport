@@ -1,19 +1,24 @@
-﻿using System.Text;
-using System.Text.Json;
-using CustomerService.API.Services.Interfaces;
-using CustomerService.API.Utils;
-using EllipticCurve;
-using Newtonsoft.Json.Serialization;
+﻿using System;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using CustomerService.API.Utils;
+using CustomerService.API.Services.Interfaces;
 
 namespace CustomerService.API.Services.Implementations
 {
-    internal sealed class GeminiClient:IGeminiClient
+    internal class GeminiClient : IGeminiClient
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<GeminiClient> _logger;
-        private readonly string _apikey;
-
+        private readonly string _url;
+        private readonly string _systemPrompt;
         private readonly JsonSerializerSettings _serializerSettings = new()
         {
             ContractResolver = new DefaultContractResolver
@@ -22,29 +27,76 @@ namespace CustomerService.API.Services.Implementations
             }
         };
 
-        public GeminiClient(HttpClient httpClient, ILogger<GeminiClient> logger, IConfiguration config)
+        public GeminiClient(
+            HttpClient httpClient,
+            ILogger<GeminiClient> logger,
+            IOptions<GeminiOptions> options)
         {
             _httpClient = httpClient;
             _logger = logger;
-            _apikey = config["Gemini:ApiKey"!];
+            _url = options.Value.Url;          // ruta relativa: "/v1beta/models/…"
+            _systemPrompt = options.Value.SystemPrompt; // prompt desde configuración
         }
 
-        public async Task<string?> GenerateContentAsync(string prompt, CancellationToken cancellationToken)
+        public async Task<string> GenerateContentAsync(
+            string systemContext,
+            string userPrompt,
+            CancellationToken cancellationToken)
         {
-            var requestBody = GeminiRequestFactory.CreateRequest(prompt);
-            var content = new StringContent(JsonConvert.SerializeObject(requestBody, Formatting.None, _serializerSettings), Encoding.UTF8, "application/json");
+            if (string.IsNullOrWhiteSpace(systemContext))
+                throw new ArgumentException("System context cannot be empty.", nameof(systemContext));
+            if (string.IsNullOrWhiteSpace(userPrompt))
+                throw new ArgumentException("User prompt cannot be empty.", nameof(userPrompt));
 
-            var response = await _httpClient.PostAsync($"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={_apikey}", content, cancellationToken);
+            _logger.LogInformation("Llamando a Gemini API…");
 
-            response.EnsureSuccessStatusCode();
+            var payload = new
+            {
+                model = "models/gemini-1.5-flash",
+                contents = new[] {
+    new {
+      parts = new[] {
+        new { text = systemContext },
+        new { text = userPrompt    }
+      }
+    }
+  },
+                generationConfig = new
+                {
+                    temperature = 0,
+                    top_p = 1,
+                    top_k = 1,
+                    candidate_count = 1
+                }
+            };
 
-            var responseBody = await response.Content.ReadAsStringAsync();
 
-            var geminiResponse = JsonConvert.DeserializeObject<GeminiResponse>(responseBody);
+            var json = JsonConvert.SerializeObject(payload, Formatting.None, _serializerSettings);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var geminiResponseText = geminiResponse?.Candidates[0].Content.Parts[0].Text;
+            // Como BaseAddress ya es el host, aquí uso la ruta relativa
+            var response = await _httpClient.PostAsync(_url, content, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            return geminiResponseText;
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Gemini API devolvió {StatusCode}: {Body}", response.StatusCode, body);
+                throw new InvalidOperationException($"Gemini API error {response.StatusCode}");
+            }
+
+            var geminiResponse = JsonConvert.DeserializeObject<GeminiResponse>(body)
+                                 ?? throw new InvalidOperationException("Empty response from Gemini.");
+
+            var result = geminiResponse.Candidates?
+                          .FirstOrDefault()?
+                          .Content?
+                          .Parts?
+                          .FirstOrDefault()?
+                          .Text
+                          ?? string.Empty;
+
+            _logger.LogInformation("Respuesta de Gemini recibida.");
+            return result;
         }
     }
 }
