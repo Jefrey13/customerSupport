@@ -11,10 +11,6 @@ using CustomerService.API.Services.Interfaces;
 
 namespace CustomerService.API.Services.Implementations
 {
-    /// <summary>
-    /// Maneja el envío y la recuperación de mensajes por conversación,
-    /// incluyendo el orden cronológico y carga de adjuntos.
-    /// </summary>
     public class MessageService : IMessageService
     {
         private readonly IUnitOfWork _uow;
@@ -26,8 +22,11 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task<MessageDto> SendMessageAsync(SendMessageRequest request, CancellationToken cancellation = default)
         {
-            if (request.ConversationId <= 0) throw new ArgumentException("Invalid conversation ID.", nameof(request.ConversationId));
-            if (string.IsNullOrWhiteSpace(request.MessageType)) throw new ArgumentException("MessageType is required.", nameof(request.MessageType));
+            if (request.ConversationId <= 0)
+                throw new ArgumentException("ConversationId must be greater than zero.", nameof(request.ConversationId));
+
+            if (string.IsNullOrWhiteSpace(request.MessageType))
+                throw new ArgumentException("MessageType is required.", nameof(request.MessageType));
 
             var msg = new Message
             {
@@ -37,8 +36,12 @@ namespace CustomerService.API.Services.Implementations
                 MessageType = request.MessageType,
                 CreatedAt = DateTime.UtcNow
             };
+
             await _uow.Messages.AddAsync(msg, cancellation);
             await _uow.SaveChangesAsync(cancellation);
+
+            // Si viene un archivo en request.File, debe haberse manejado antes de invocar este servicio:
+            //   subida a storage, creación de Attachment y guardado con _uow.Attachments
 
             return new MessageDto
             {
@@ -47,32 +50,46 @@ namespace CustomerService.API.Services.Implementations
                 SenderId = msg.SenderId,
                 Content = msg.Content,
                 MessageType = msg.MessageType,
-                CreatedAt = msg.CreatedAt
-            };
-        }
-
-        public async Task<IEnumerable<MessageDto>> GetByConversationAsync(int conversationId, CancellationToken cancellation = default)
-        {
-            if (conversationId <= 0) throw new ArgumentException("Invalid conversation ID.", nameof(conversationId));
-
-            var list = await _uow.Messages.GetByConversationAsync(conversationId, cancellation);
-            return list.Select(m => new MessageDto
-            {
-                MessageId = m.MessageId,
-                ConversationId = m.ConversationId,
-                SenderId = m.SenderId,
-                Content = m.Content,
-                MessageType = m.MessageType,
-                CreatedAt = m.CreatedAt,
-                Attachments = m.Attachments?.Select(a => new AttachmentDto
+                CreatedAt = msg.CreatedAt,
+                Attachments = msg.Attachments.Select(a => new AttachmentDto
                 {
                     AttachmentId = a.AttachmentId,
                     MessageId = a.MessageId,
                     MediaId = a.MediaId,
                     FileName = a.FileName,
-                    MediaUrl = a.MediaUrl,
-                }).ToList() ?? new List<AttachmentDto>()
-            });
+                    MimeType = a.MimeType,
+                    MediaUrl = a.MediaUrl
+                }).ToList()
+            };
+        }
+
+        public async Task<IEnumerable<MessageDto>> GetByConversationAsync(int conversationId, CancellationToken cancellation = default)
+        {
+            if (conversationId <= 0)
+                throw new ArgumentException("ConversationId must be greater than zero.", nameof(conversationId));
+
+            var messages = await _uow.Messages.GetByConversationAsync(conversationId, cancellation);
+
+            return messages
+                .OrderBy(m => m.CreatedAt)
+                .Select(m => new MessageDto
+                {
+                    MessageId = m.MessageId,
+                    ConversationId = m.ConversationId,
+                    SenderId = m.SenderId,
+                    Content = m.Content,
+                    MessageType = m.MessageType,
+                    CreatedAt = m.CreatedAt,
+                    Attachments = m.Attachments.Select(a => new AttachmentDto
+                    {
+                        AttachmentId = a.AttachmentId,
+                        MessageId = a.MessageId,
+                        MediaId = a.MediaId,
+                        FileName = a.FileName,
+                        MimeType = a.MimeType,
+                        MediaUrl = a.MediaUrl
+                    }).ToList()
+                });
         }
     }
 }

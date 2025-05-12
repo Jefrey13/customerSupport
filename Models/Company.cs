@@ -9,6 +9,8 @@ public partial class Company
 
     public string Name { get; set; } = null!;
 
+    public string? Address { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();

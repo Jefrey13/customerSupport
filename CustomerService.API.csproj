@@ -53,4 +53,8 @@
     <PackageReference Include="WhatsappBusiness.CloudApi" Version="1.0.64" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Logs\" />
+  </ItemGroup>
+
 </Project>

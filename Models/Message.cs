@@ -12,6 +12,7 @@ public partial class Message
     public int SenderId { get; set; }
 
     public string? Content { get; set; }
+    public string ExternalId { get; set; } = "";
 
     public string MessageType { get; set; } = null!;
 

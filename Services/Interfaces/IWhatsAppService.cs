@@ -6,6 +6,12 @@
     public interface IWhatsAppService
     {
         Task SendTextAsync(string toPhone, string text);
+
+        Task SendTextAsync(
+               int conversationId,
+               int senderId,
+               string text,
+               CancellationToken cancellation = default);
         Task<string> UploadMediaAsync(byte[] data, string mimeType);
         Task SendMediaAsync(string toPhone, string mediaId, string mimeType, string? caption = null);
     }

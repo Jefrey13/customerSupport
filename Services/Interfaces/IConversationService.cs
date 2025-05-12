@@ -5,6 +5,7 @@ namespace CustomerService.API.Services.Interfaces
 {
     public interface IConversationService
     {
+        Task<IEnumerable<ConversationDto>> GetAllAsync(CancellationToken cancellation = default);
         Task<ConversationDto> StartAsync(StartConversationRequest request, CancellationToken cancellation = default);
         Task<IEnumerable<ConversationDto>> GetPendingAsync(CancellationToken cancellation = default);
         Task AssignAgentAsync(int conversationId, int agentUserId, CancellationToken cancellation = default);

@@ -11,5 +11,10 @@
         public string? Identifier { get; init; }
         public DateTime CreatedAt { get; init; }
         public DateTime? UpdatedAt { get; init; }
+
+        public string? ImageUrl { get; init; }
+        public string ClientType { get; init; } = "Nuevo";
+        public DateTime? LastOnline { get; init; }
+        public bool IsOnline { get; init; }
     }
 }

@@ -1,13 +1,16 @@
-﻿using CustomerService.API.Models;
+﻿using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using CustomerService.API.Models;
 using CustomerService.API.Repositories.Interfaces;
 using CustomerService.API.Services.Interfaces;
 using CustomerService.API.Utils;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace CustomerService.API.Services.Implementations
 {
@@ -35,12 +38,18 @@ namespace CustomerService.API.Services.Implementations
                     .Result
                     .Select(ur => ur.Role.RoleName);
 
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            };
+                var claims = new List<Claim>
+                {
+                    // Standard subject claim
+                    new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
+                    // Include NameIdentifier so SignalR and other code can pick it up
+                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                     new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                };
+
+            // Role claims
             claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
             var creds = new SigningCredentials(

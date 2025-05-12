@@ -11,7 +11,7 @@ using CustomerService.API.Services.Interfaces;
 namespace CustomerService.API.Services.Implementations
 {
     /// <summary>
-    /// Gestiona la subida y recuperación de adjuntos (mediaId, URL, nombre).
+    /// Implementa la lógica de negocio para adjuntos: subida y recuperación.
     /// </summary>
     public class AttachmentService : IAttachmentService
     {
@@ -24,48 +24,57 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task<AttachmentDto> UploadAsync(UploadAttachmentRequest request, CancellationToken cancellation = default)
         {
-            if (request.MessageId <= 0) throw new ArgumentException("Invalid message ID.", nameof(request.MessageId));
-            if (string.IsNullOrWhiteSpace(request.MediaId)) throw new ArgumentException("MediaId is required.", nameof(request.MediaId));
+            if (request.MessageId <= 0)
+                throw new ArgumentException("MessageId must be greater than zero.", nameof(request.MessageId));
 
-            var a = new Attachment
+            if (string.IsNullOrWhiteSpace(request.MediaId))
+                throw new ArgumentException("MediaId is required.", nameof(request.MediaId));
+
+            var attachment = new Attachment
             {
                 MessageId = request.MessageId,
                 MediaId = request.MediaId,
                 FileName = request.FileName,
+                MimeType = request.MimeType,
                 MediaUrl = request.MediaUrl,
                 CreatedAt = DateTime.UtcNow
             };
-            await _uow.Attachments.AddAsync(a, cancellation);
+
+            await _uow.Attachments.AddAsync(attachment, cancellation);
             await _uow.SaveChangesAsync(cancellation);
 
             return new AttachmentDto
             {
-                AttachmentId = a.AttachmentId,
-                MessageId = a.MessageId,
-                MediaId = a.MediaId,
-                FileName = a.FileName,
-                MediaUrl = a.MediaUrl,
+                AttachmentId = attachment.AttachmentId,
+                MessageId = attachment.MessageId,
+                MediaId = attachment.MediaId,
+                FileName = attachment.FileName,
+                MimeType = attachment.MimeType,
+                MediaUrl = attachment.MediaUrl
             };
         }
 
         public async Task<IEnumerable<AttachmentDto>> GetByMessageAsync(int messageId, CancellationToken cancellation = default)
         {
-            if (messageId <= 0) throw new ArgumentException("Invalid message ID.", nameof(messageId));
+            if (messageId <= 0)
+                throw new ArgumentException("MessageId must be greater than zero.", nameof(messageId));
 
-            var list = await _uow.Attachments.GetByMessageAsync(messageId, cancellation);
-            var dtos = new List<AttachmentDto>();
-            foreach (var a in list)
+            var attachments = await _uow.Attachments.GetByMessageAsync(messageId, cancellation);
+
+            var result = new List<AttachmentDto>();
+            foreach (var a in attachments)
             {
-                dtos.Add(new AttachmentDto
+                result.Add(new AttachmentDto
                 {
                     AttachmentId = a.AttachmentId,
                     MessageId = a.MessageId,
                     MediaId = a.MediaId,
                     FileName = a.FileName,
-                    MediaUrl = a.MediaUrl,
+                    MimeType = a.MimeType,
+                    MediaUrl = a.MediaUrl
                 });
             }
-            return dtos;
+            return result;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using CustomerService.API.Dtos.RequestDtos;
@@ -23,16 +23,17 @@ namespace CustomerService.API.Controllers
             _users = users;
         }
 
+        // GET /api/v1/users
         [HttpGet(Name = "GetAllUsers")]
         [SwaggerOperation(Summary = "Retrieve paged list of users")]
         [ProducesResponseType(typeof(ApiResponse<PagedResponse<UserDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll([FromQuery] PaginationParams @params, CancellationToken ct = default)
         {
             var paged = await _users.GetAllAsync(@params, ct);
-            var response = new ApiResponse<PagedResponse<UserDto>>(paged, "Users retrieved.");
-            return Ok(response);
+            return Ok(new ApiResponse<PagedResponse<UserDto>>(paged, "Users retrieved."));
         }
 
+        // GET /api/v1/users/{id}
         [HttpGet("{id}", Name = "GetUserById")]
         [SwaggerOperation(Summary = "Retrieve a user by ID")]
         [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status200OK)]
@@ -45,6 +46,7 @@ namespace CustomerService.API.Controllers
             return Ok(new ApiResponse<UserDto>(dto, "User retrieved."));
         }
 
+        // POST /api/v1/users
         [HttpPost(Name = "CreateUser")]
         [SwaggerOperation(Summary = "Create a new user")]
         [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status201Created)]
@@ -56,6 +58,7 @@ namespace CustomerService.API.Controllers
                 new ApiResponse<UserDto>(dto, "User created."));
         }
 
+        // PUT /api/v1/users/{id}
         [HttpPut("{id}", Name = "UpdateUser")]
         [SwaggerOperation(Summary = "Update an existing user")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -70,15 +73,27 @@ namespace CustomerService.API.Controllers
             return NoContent();
         }
 
+        // DELETE /api/v1/users/{id}
         [HttpDelete("{id}", Name = "DeleteUser")]
         [SwaggerOperation(Summary = "Delete a user by ID")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken ct = default)
         {
-            // Podrías verificar existencia antes de eliminar, dependiendo de tu implementación
             await _users.DeleteAsync(id, ct);
             return NoContent();
+        }
+
+        [HttpGet("agents", Name = "GetAgentsByRole")]
+        [SwaggerOperation(Summary = "Lista de usuarios filtrado por rol")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<AgentDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAgents([FromQuery] string role, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                return BadRequest(ApiResponse<object>.Fail("Debe especificar el parámetro 'role' para filtrar."));
+
+            var agents = await _users.GetByRoleAsync(role, ct);
+            return Ok(new ApiResponse<IEnumerable<AgentDto>>(agents, $"Usuarios con rol '{role}' obtenidos."));
         }
     }
 }

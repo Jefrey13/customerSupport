@@ -8,13 +8,9 @@ namespace CustomerService.API.Pipelines.Interfaces
     /// </summary>
     public interface IMessagePipeline
     {
-        Task ProcessIncomingAsync(
-            string fromPhone,
-            string? text,
-            string? mediaId,
-            string? mimeType,
-            string? caption,
-            CancellationToken cancellationToken = default
-        );
+        Task ProcessIncomingAsync(string fromPhone, string externalId,
+                          string? text, string? mediaId,
+                          string? mimeType, string? caption,
+                          CancellationToken ct = default);
     }
 }

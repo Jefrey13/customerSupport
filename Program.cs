@@ -28,6 +28,9 @@ using System.Security.Claims;
 using CustomerService.API.Pipelines.Implementations;
 using CustomerService.API.Pipelines.Interfaces;
 using CustomerService.API.Data.Context;
+using MapsterMapper;
+using System.Reflection;
+using CustomerService.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,7 +103,14 @@ builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 builder.Services.AddScoped<IMessagePipeline, MessagePipeline>();
 
 // --------------------- Mapster ---------------------
-builder.Services.AddMapster();
+var mapsterConfig = TypeAdapterConfig.GlobalSettings;
+mapsterConfig.Scan(Assembly.GetExecutingAssembly());
+builder.Services.AddSingleton(mapsterConfig);
+builder.Services.AddScoped<IMapper, ServiceMapper>();
+
+builder.Services.AddSingleton<IPresenceService, PresenceService>();
+builder.Services.AddHostedService<PresenceBackgroundService>();
+builder.Services.AddSingleton<ISignalRNotifyService, SignalRNotifyService>();
 
 // --------------------- Response Caching & Compression ---------------------
 builder.Services.AddMemoryCache();
@@ -192,16 +202,15 @@ builder.Services.AddSwaggerGen(c =>
 // --------------------- Controllers ---------------------
 builder.Services.AddControllers();
 
+
 var app = builder.Build();
 
 // --------------------- Middleware Pipeline ---------------------
 app.UseSerilogRequestLogging();
-app.UseCors("CorsPolicy");
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1"));
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
@@ -211,6 +220,12 @@ app.UseIpRateLimiting();
 app.UseErrorHandling();
 
 app.UseRouting();
+
+app.UseCors("CorsPolicy");
+
+
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1"));
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -229,6 +244,7 @@ app.MapHealthChecksUI();
 
 // SignalR hub
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 // API controllers
 app.MapControllers();

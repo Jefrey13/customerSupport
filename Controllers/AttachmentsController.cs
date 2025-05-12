@@ -24,10 +24,10 @@ namespace CustomerService.API.Controllers
             _attachments = attachments;
         }
 
-        // GET /api/v1/attachments/message/{messageId}
         [HttpGet("message/{messageId}", Name = "GetAttachmentsByMessage")]
         [SwaggerOperation(Summary = "Retrieve attachments for a given message")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AttachmentDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetByMessage(
             [FromRoute] int messageId,
             CancellationToken ct = default)
@@ -36,7 +36,6 @@ namespace CustomerService.API.Controllers
             return Ok(new ApiResponse<IEnumerable<AttachmentDto>>(list, "Attachments retrieved."));
         }
 
-        // POST /api/v1/attachments
         [HttpPost(Name = "UploadAttachment")]
         [DisableRequestSizeLimit]
         [SwaggerOperation(Summary = "Upload a new attachment for a message")]
@@ -48,9 +47,11 @@ namespace CustomerService.API.Controllers
             CancellationToken ct = default)
         {
             var dto = await _attachments.UploadAsync(req, ct);
-            return CreatedAtRoute("GetAttachmentsByMessage",
-                new { messageId = dto.MessageId },
-                new ApiResponse<AttachmentDto>(dto, "Attachment uploaded."));
+            return CreatedAtRoute(
+                routeName: "GetAttachmentsByMessage",
+                routeValues: new { messageId = dto.MessageId },
+                value: new ApiResponse<AttachmentDto>(dto, "Attachment uploaded.")
+            );
         }
     }
 }

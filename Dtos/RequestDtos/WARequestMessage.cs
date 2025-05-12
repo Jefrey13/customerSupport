@@ -8,5 +8,6 @@
         public VideoDto? Video { get; set; }
         public DocumentDto? Document { get; set; }
         public string? Caption { get; set; }
+        public string MessageId { get; set; } = "";
     }
 }

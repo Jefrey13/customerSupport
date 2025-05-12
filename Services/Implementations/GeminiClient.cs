@@ -52,7 +52,7 @@ namespace CustomerService.API.Services.Implementations
 
             var payload = new
             {
-                model = "models/gemini-1.5-flash",
+                model = "models/gemini-2.0-flash",
                 contents = new[] {
     new {
       parts = new[] {

@@ -61,6 +61,7 @@ namespace CustomerService.API.Services.Implementations
                 IsActive = false,
                 CompanyId = request.CompanyId,
                 Phone = request.Phone,
+                ImageUrl = request.ImageUrl,
                 Identifier = request.Identifier,
                 CreatedAt = DateTime.UtcNow
             };

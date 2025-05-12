@@ -15,7 +15,8 @@ namespace CustomerService.API.Dtos.RequestDtos
         // nombre original
         public string? FileName { get; set; }
 
-        // Nuevo (si  el cliente pase la URL tras subirla por otro canal)
+        // (si  el cliente pase la URL tras subirla por otro canal)
         public string? MediaUrl { get; set; }
+        public string? MimeType { get; set; }
     }
 }

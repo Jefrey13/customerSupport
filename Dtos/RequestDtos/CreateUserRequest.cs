@@ -20,5 +20,7 @@ namespace CustomerService.API.Dtos.RequestDtos
         public string? Phone { get; set; }
 
         public string? Identifier { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }

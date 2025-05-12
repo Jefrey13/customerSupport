@@ -11,5 +11,7 @@ namespace CustomerService.API.Services.Interfaces
         Task<UserDto> CreateAsync(CreateUserRequest request, CancellationToken cancellation = default);
         Task UpdateAsync(UpdateUserRequest request, CancellationToken cancellation = default);
         Task DeleteAsync(int id, CancellationToken cancellation = default);
+
+        Task<IEnumerable<AgentDto>> GetByRoleAsync(string roleName, CancellationToken cancellation = default);
     }
 }

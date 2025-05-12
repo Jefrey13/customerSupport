@@ -24,8 +24,10 @@ namespace CustomerService.API.Controllers
             _messages = messages;
         }
 
+        /// <summary>
+        /// Retrieve all messages for a conversation (including attachments), ordered chronologically.
+        /// </summary>
         [HttpGet(Name = "GetMessagesByConversation")]
-        [Authorize]
         [SwaggerOperation(Summary = "Retrieve all messages for a conversation")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<MessageDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -37,8 +39,10 @@ namespace CustomerService.API.Controllers
             return Ok(new ApiResponse<IEnumerable<MessageDto>>(list, "Messages retrieved."));
         }
 
+        /// <summary>
+        /// Send a new message (text or media) in a conversation.
+        /// </summary>
         [HttpPost(Name = "SendMessage")]
-        [Authorize]
         [SwaggerOperation(Summary = "Send a message in a conversation")]
         [ProducesResponseType(typeof(ApiResponse<MessageDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
@@ -47,13 +51,14 @@ namespace CustomerService.API.Controllers
             [FromForm] SendMessageRequest req,
             CancellationToken ct = default)
         {
-            // Ensure the request knows the conversation
             req.ConversationId = conversationId;
 
             var dto = await _messages.SendMessageAsync(req, ct);
-            return CreatedAtRoute("GetMessagesByConversation",
-                new { conversationId = conversationId },
-                new ApiResponse<MessageDto>(dto, "Message sent."));
+            return CreatedAtRoute(
+                routeName: "GetMessagesByConversation",
+                routeValues: new { conversationId = conversationId },
+                value: new ApiResponse<MessageDto>(dto, "Message sent.")
+            );
         }
     }
 }

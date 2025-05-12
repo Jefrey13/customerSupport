@@ -25,13 +25,14 @@ namespace CustomerService.API.Services.Implementations
             var companies = await _uow.Companies.GetAll()
                                 .ToListAsync(cancellation);
 
-            var dtos = new List<CompanyDto>();
+            var dtos = new List<CompanyDto>(companies.Count);
             foreach (var c in companies)
             {
                 dtos.Add(new CompanyDto
                 {
                     CompanyId = c.CompanyId,
                     Name = c.Name,
+                    Address = c.Address,
                     CreatedAt = c.CreatedAt
                 });
             }
@@ -49,6 +50,7 @@ namespace CustomerService.API.Services.Implementations
             {
                 CompanyId = c.CompanyId,
                 Name = c.Name,
+                Address = c.Address,
                 CreatedAt = c.CreatedAt
             };
         }
@@ -64,6 +66,7 @@ namespace CustomerService.API.Services.Implementations
             var entity = new Company
             {
                 Name = request.Name.Trim(),
+                Address = request.Address?.Trim(),
                 CreatedAt = DateTime.UtcNow
             };
             await _uow.Companies.AddAsync(entity, cancellation);
@@ -73,6 +76,7 @@ namespace CustomerService.API.Services.Implementations
             {
                 CompanyId = entity.CompanyId,
                 Name = entity.Name,
+                Address = entity.Address,
                 CreatedAt = entity.CreatedAt
             };
         }
@@ -92,6 +96,7 @@ namespace CustomerService.API.Services.Implementations
             }
 
             entity.Name = request.Name.Trim();
+            entity.Address = request.Address?.Trim();
             _uow.Companies.Update(entity);
             await _uow.SaveChangesAsync(cancellation);
         }

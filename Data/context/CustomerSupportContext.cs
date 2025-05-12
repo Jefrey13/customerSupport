@@ -151,15 +151,15 @@ public partial class CustomerSupportContext : DbContext
             entity
                 .ToTable("Users", "auth")
                 .ToTable(tb => tb.IsTemporal(ttb =>
-                    {
-                        ttb.UseHistoryTable("UsersHistory", "auth");
-                        ttb
-                            .HasPeriodStart("ValidFrom")
-                            .HasColumnName("ValidFrom");
-                        ttb
-                            .HasPeriodEnd("ValidTo")
-                            .HasColumnName("ValidTo");
-                    }));
+                {
+                    ttb.UseHistoryTable("UsersHistory", "auth");
+                    ttb
+                        .HasPeriodStart("ValidFrom")
+                        .HasColumnName("ValidFrom");
+                    ttb
+                        .HasPeriodEnd("ValidTo")
+                        .HasColumnName("ValidTo");
+                }));
 
             entity.Property(e => e.ConcurrencyStamp).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");

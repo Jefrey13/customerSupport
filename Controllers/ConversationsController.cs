@@ -24,6 +24,36 @@ namespace CustomerService.API.Controllers
             _conversations = conversations;
         }
 
+        [HttpGet(Name = "GetAllConversations")]
+        [SwaggerOperation(Summary = "List all conversations")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ConversationDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll(CancellationToken ct = default)
+        {
+            var list = await _conversations.GetAllAsync(ct);
+            return Ok(new ApiResponse<IEnumerable<ConversationDto>>(list, "All conversations retrieved."));
+        }
+
+        [HttpGet("pending", Name = "GetPendingConversations")]
+        [SwaggerOperation(Summary = "List all conversations waiting for human agent")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ConversationDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPending(CancellationToken ct = default)
+        {
+            var list = await _conversations.GetPendingAsync(ct);
+            return Ok(new ApiResponse<IEnumerable<ConversationDto>>(list, "Pending conversations retrieved."));
+        }
+
+        [HttpGet("{id}", Name = "GetConversationById")]
+        [SwaggerOperation(Summary = "Get conversation details by ID")]
+        [ProducesResponseType(typeof(ApiResponse<ConversationDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById([FromRoute] int id, CancellationToken ct = default)
+        {
+            var dto = await _conversations.GetByIdAsync(id, ct);
+            if (dto == null)
+                return NotFound(new ApiResponse<object>(null, "Conversation not found."));
+            return Ok(new ApiResponse<ConversationDto>(dto, "Conversation retrieved."));
+        }
+
         [HttpPost(Name = "StartConversation")]
         [AllowAnonymous]
         [SwaggerOperation(Summary = "Start a new conversation (client or bot)")]
@@ -36,19 +66,7 @@ namespace CustomerService.API.Controllers
                 new ApiResponse<ConversationDto>(dto, "Conversation started."));
         }
 
-
-        [HttpGet("pending", Name = "GetPendingConversations")]
-        [Authorize(Policy = "AgentPolicy")]
-        [SwaggerOperation(Summary = "List all conversations waiting for human agent")]
-        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ConversationDto>>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetPending(CancellationToken ct = default)
-        {
-            var list = await _conversations.GetPendingAsync(ct);
-            return Ok(new ApiResponse<IEnumerable<ConversationDto>>(list, "Pending conversations retrieved."));
-        }
-
         [HttpPatch("{id}", Name = "AssignAgent")]
-        [Authorize(Policy = "AgentPolicy")]
         [SwaggerOperation(Summary = "Assign an agent and update status")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -61,21 +79,7 @@ namespace CustomerService.API.Controllers
             return NoContent();
         }
 
-        [HttpGet("{id}", Name = "GetConversationById")]
-        [Authorize]
-        [SwaggerOperation(Summary = "Get conversation details by ID")]
-        [ProducesResponseType(typeof(ApiResponse<ConversationDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetById([FromRoute] int id, CancellationToken ct = default)
-        {
-            var dto = await _conversations.GetByIdAsync(id, ct);
-            if (dto == null)
-                return NotFound(new ApiResponse<object>(null, "Conversation not found."));
-            return Ok(new ApiResponse<ConversationDto>(dto, "Conversation retrieved."));
-        }
-
         [HttpPost("{id}/close", Name = "CloseConversation")]
-        [Authorize(Policy = "AgentPolicy")]
         [SwaggerOperation(Summary = "Close an active conversation")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]

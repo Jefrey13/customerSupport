@@ -8,13 +8,10 @@ using CustomerService.API.Dtos.ResponseDtos;
 using CustomerService.API.Models;
 using CustomerService.API.Repositories.Interfaces;
 using CustomerService.API.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CustomerService.API.Services.Implementations
 {
-    /// <summary>
-    /// Encapsula la lógica de iniciar conversaciones, listarlas,
-    /// asignar agentes, obtener detalle y cerrarlas.
-    /// </summary>
     public class ConversationService : IConversationService
     {
         private readonly IUnitOfWork _uow;
@@ -24,7 +21,19 @@ namespace CustomerService.API.Services.Implementations
             _uow = uow ?? throw new ArgumentNullException(nameof(uow));
         }
 
-        public async Task<ConversationDto> StartAsync(StartConversationRequest request, CancellationToken cancellation = default)
+        public async Task<IEnumerable<ConversationDto>> GetAllAsync(CancellationToken cancellation = default)
+        {
+            var conversations = await _uow.Conversations
+                .GetAll()
+                .Include(c => c.Messages)
+                .ToListAsync(cancellation);
+
+            return conversations.Select(c => ToDto(c));
+        }
+
+        public async Task<ConversationDto> StartAsync(
+            StartConversationRequest request,
+            CancellationToken cancellation = default)
         {
             var conv = new Conversation
             {
@@ -33,36 +42,29 @@ namespace CustomerService.API.Services.Implementations
                 Status = "Bot",
                 CreatedAt = DateTime.UtcNow
             };
+
             await _uow.Conversations.AddAsync(conv, cancellation);
             await _uow.SaveChangesAsync(cancellation);
 
-            return new ConversationDto
-            {
-                ConversationId = conv.ConversationId,
-                CompanyId = conv.CompanyId,
-                ClientUserId = conv.ClientUserId,
-                Status = conv.Status,
-                CreatedAt = conv.CreatedAt
-            };
+            return ToDto(conv);
         }
 
         public async Task<IEnumerable<ConversationDto>> GetPendingAsync(CancellationToken cancellation = default)
         {
-            var list = await _uow.Conversations.GetPendingAsync(cancellation);
-            return list.Select(c => new ConversationDto
-            {
-                ConversationId = c.ConversationId,
-                CompanyId = c.CompanyId,
-                ClientUserId = c.ClientUserId,
-                Status = c.Status,
-                CreatedAt = c.CreatedAt,
-                AssignedAgent = c.AssignedAgent
-            });
+            // Usamos GetAll + filtro + Include para cargar mensajes
+            var conversations = await _uow.Conversations
+                .GetAll()
+                .Where(c => c.Status == "PendingHuman" || c.Status == "Bot")
+                .Include(c => c.Messages)
+                .ToListAsync(cancellation);
+
+            return conversations.Select(c => ToDto(c));
         }
 
         public async Task AssignAgentAsync(int conversationId, int agentUserId, CancellationToken cancellation = default)
         {
-            if (conversationId <= 0) throw new ArgumentException("Invalid conversation ID.", nameof(conversationId));
+            if (conversationId <= 0)
+                throw new ArgumentException("Invalid conversation ID.", nameof(conversationId));
 
             var conv = await _uow.Conversations.GetByIdAsync(conversationId, cancellation)
                        ?? throw new KeyNotFoundException("Conversation not found.");
@@ -77,26 +79,22 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task<ConversationDto?> GetByIdAsync(int id, CancellationToken cancellation = default)
         {
-            if (id <= 0) throw new ArgumentException("Invalid conversation ID.", nameof(id));
+            if (id <= 0)
+                throw new ArgumentException("Invalid conversation ID.", nameof(id));
 
-            var c = await _uow.Conversations.GetByIdAsync(id, cancellation);
+            var c = await _uow.Conversations
+                .GetAll()
+                .Include(x => x.Messages)
+                .SingleOrDefaultAsync(x => x.ConversationId == id, cancellation);
+
             if (c == null) return null;
-
-            return new ConversationDto
-            {
-                ConversationId = c.ConversationId,
-                CompanyId = c.CompanyId,
-                ClientUserId = c.ClientUserId,
-                Status = c.Status,
-                CreatedAt = c.CreatedAt,
-                AssignedAgent = c.AssignedAgent,
-                AssignedAt = c.AssignedAt
-            };
+            return ToDto(c);
         }
 
         public async Task CloseAsync(int conversationId, CancellationToken cancellation = default)
         {
-            if (conversationId <= 0) throw new ArgumentException("Invalid conversation ID.", nameof(conversationId));
+            if (conversationId <= 0)
+                throw new ArgumentException("Invalid conversation ID.", nameof(conversationId));
 
             var c = await _uow.Conversations.GetByIdAsync(conversationId, cancellation)
                   ?? throw new KeyNotFoundException("Conversation not found.");
@@ -105,5 +103,22 @@ namespace CustomerService.API.Services.Implementations
             _uow.Conversations.Update(c);
             await _uow.SaveChangesAsync(cancellation);
         }
+
+        private static ConversationDto ToDto(Conversation c) =>
+            new ConversationDto
+            {
+                ConversationId = c.ConversationId,
+                CompanyId = c.CompanyId,
+                ClientUserId = c.ClientUserId,
+                AssignedAgent = c.AssignedAgent,
+                Status = c.Status,
+                CreatedAt = c.CreatedAt,
+                AssignedAt = c.AssignedAt,
+                TotalMensajes = c.Messages.Count,
+                UltimaActividad = c.Messages.Any()
+                                  ? c.Messages.Max(m => m.CreatedAt)
+                                  : c.CreatedAt,
+                Duracion = DateTime.UtcNow - c.CreatedAt
+            };
     }
 }
