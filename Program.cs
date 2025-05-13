@@ -93,6 +93,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -224,6 +225,7 @@ app.UseRouting();
 app.UseCors("CorsPolicy");
 
 
+
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1"));
 
@@ -240,6 +242,7 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     Predicate = _ => true,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
+
 app.MapHealthChecksUI();
 
 // SignalR hub

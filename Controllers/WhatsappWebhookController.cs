@@ -30,9 +30,6 @@ namespace CustomerService.API.Controllers
             _verifyToken = config["WhatsApp:VerifyToken"]!;
         }
 
-        /// <summary>
-        /// Verifies the webhook subscription request from WhatsApp Cloud API.
-        /// </summary>
         [HttpGet("webhook", Name = "VerifyWhatsappWebhook")]
         [SwaggerOperation(
             Summary = "Verify WhatsApp webhook subscription",
@@ -57,10 +54,6 @@ namespace CustomerService.API.Controllers
             return Forbid();
         }
 
-        /// <summary>
-        /// Recibe actualizaciones de WhatsApp Cloud API.
-        /// Solo procesa ‘messages’ y descarta ‘statuses’ para evitar duplicados.
-        /// </summary>
         [HttpPost("webhook", Name = "ReceiveWhatsappWebhook")]
         [SwaggerOperation(
             Summary = "Receive WhatsApp messages",
@@ -75,7 +68,7 @@ namespace CustomerService.API.Controllers
             if (update?.Entry == null || !update.Entry.Any())
                 return BadRequest(ApiResponse<object>.Fail("Invalid payload structure."));
 
-            // Tomamos el primer cambio
+            // Tomar el primer cambio
             var change = update.Entry
                                .First()
                                .Changes
@@ -113,9 +106,6 @@ namespace CustomerService.API.Controllers
             ));
         }
 
-        /// <summary>
-        /// Envía un mensaje de WhatsApp, lo persiste en BD y notifica vía SignalR.
-        /// </summary>
         [HttpPost("{conversationId}/send")]
         [SwaggerOperation(
             Summary = "Envía un mensaje en el contexto de una conversación",
@@ -133,7 +123,7 @@ namespace CustomerService.API.Controllers
                 return BadRequest(ApiResponse<object>.Fail("Los campos 'to' y 'body' son obligatorios."));
 
             // Aquí defines quién está enviando:
-            // si es tu bot, podrías tener un constante o extraerlo de contexto.
+            //Hay que extraer del jwt el identificador del quien envia el mensaje. Temporalmente se definira al admin 1. No lo elvides...
             const int BotUserId = 1;
 
             await _whatsAppService

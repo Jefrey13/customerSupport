@@ -23,7 +23,6 @@ namespace CustomerService.API.Controllers
             _users = users;
         }
 
-        // GET /api/v1/users
         [HttpGet(Name = "GetAllUsers")]
         [SwaggerOperation(Summary = "Retrieve paged list of users")]
         [ProducesResponseType(typeof(ApiResponse<PagedResponse<UserDto>>), StatusCodes.Status200OK)]
@@ -33,7 +32,6 @@ namespace CustomerService.API.Controllers
             return Ok(new ApiResponse<PagedResponse<UserDto>>(paged, "Users retrieved."));
         }
 
-        // GET /api/v1/users/{id}
         [HttpGet("{id}", Name = "GetUserById")]
         [SwaggerOperation(Summary = "Retrieve a user by ID")]
         [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status200OK)]
@@ -46,7 +44,6 @@ namespace CustomerService.API.Controllers
             return Ok(new ApiResponse<UserDto>(dto, "User retrieved."));
         }
 
-        // POST /api/v1/users
         [HttpPost(Name = "CreateUser")]
         [SwaggerOperation(Summary = "Create a new user")]
         [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status201Created)]
@@ -58,7 +55,6 @@ namespace CustomerService.API.Controllers
                 new ApiResponse<UserDto>(dto, "User created."));
         }
 
-        // PUT /api/v1/users/{id}
         [HttpPut("{id}", Name = "UpdateUser")]
         [SwaggerOperation(Summary = "Update an existing user")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -73,7 +69,6 @@ namespace CustomerService.API.Controllers
             return NoContent();
         }
 
-        // DELETE /api/v1/users/{id}
         [HttpDelete("{id}", Name = "DeleteUser")]
         [SwaggerOperation(Summary = "Delete a user by ID")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

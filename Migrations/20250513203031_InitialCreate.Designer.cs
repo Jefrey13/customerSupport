@@ -9,10 +9,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace CustomerService.API.Data.Migrations
+namespace CustomerService.API.Migrations
 {
     [DbContext(typeof(CustomerSupportContext))]
-    [Migration("20250512050339_InitialCreate")]
+    [Migration("20250513203031_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -33,7 +33,7 @@ namespace CustomerService.API.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("(sysutcdatetime())");
@@ -54,7 +54,9 @@ namespace CustomerService.API.Data.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(sysutcdatetime())");
 
                     b.HasKey("RoleId");
 
@@ -206,6 +208,9 @@ namespace CustomerService.API.Data.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("(sysutcdatetime())");
 
+                    b.Property<bool>("Initialized")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -228,6 +233,63 @@ namespace CustomerService.API.Data.Migrations
                     b.HasIndex("CompanyId");
 
                     b.ToTable("Conversations", "chat");
+                });
+
+            modelBuilder.Entity("CustomerService.API.Models.Menus", b =>
+                {
+                    b.Property<int>("MenuId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MenuId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(sysutcdatetime())");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(sysutcdatetime())");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("MenuId");
+
+                    b.HasIndex(new[] { "Index" }, "UQ_RoleMenus_MenuIndex")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "Name" }, "UQ_RoleMenus_MenuName")
+                        .IsUnique();
+
+                    b.ToTable("Menus", "auth");
                 });
 
             modelBuilder.Entity("CustomerService.API.Models.Message", b =>
@@ -269,6 +331,31 @@ namespace CustomerService.API.Data.Migrations
                     b.HasIndex("SenderId");
 
                     b.ToTable("Messages", "chat");
+                });
+
+            modelBuilder.Entity("CustomerService.API.Models.RoleMenu", b =>
+                {
+                    b.Property<int>("MenuId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(sysutcdatetime())");
+
+                    b.Property<DateTime>("UpdateAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(sysutcdatetime())");
+
+                    b.HasKey("MenuId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("RoleMenus", "auth");
                 });
 
             modelBuilder.Entity("CustomerService.API.Models.User", b =>
@@ -455,6 +542,25 @@ namespace CustomerService.API.Data.Migrations
                     b.Navigation("Sender");
                 });
 
+            modelBuilder.Entity("CustomerService.API.Models.RoleMenu", b =>
+                {
+                    b.HasOne("CustomerService.API.Models.Menus", "Menu")
+                        .WithMany("RoleMenus")
+                        .HasForeignKey("MenuId")
+                        .IsRequired()
+                        .HasConstraintName("FK_RoleMenus_Menus");
+
+                    b.HasOne("CustomerService.API.Models.AppRole", "Role")
+                        .WithMany("RoleMenus")
+                        .HasForeignKey("RoleId")
+                        .IsRequired()
+                        .HasConstraintName("FK_RoleMenus_Roles");
+
+                    b.Navigation("Menu");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("CustomerService.API.Models.User", b =>
                 {
                     b.HasOne("CustomerService.API.Models.Company", "Company")
@@ -486,6 +592,8 @@ namespace CustomerService.API.Data.Migrations
 
             modelBuilder.Entity("CustomerService.API.Models.AppRole", b =>
                 {
+                    b.Navigation("RoleMenus");
+
                     b.Navigation("UserRoles");
                 });
 
@@ -499,6 +607,11 @@ namespace CustomerService.API.Data.Migrations
             modelBuilder.Entity("CustomerService.API.Models.Conversation", b =>
                 {
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("CustomerService.API.Models.Menus", b =>
+                {
+                    b.Navigation("RoleMenus");
                 });
 
             modelBuilder.Entity("CustomerService.API.Models.Message", b =>

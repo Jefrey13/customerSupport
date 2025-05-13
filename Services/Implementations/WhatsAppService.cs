@@ -39,7 +39,6 @@
                 string text,
                 CancellationToken cancellation = default)
             {
-                // 1) carga la conversación para obtener el teléfono
                 var convo = await _uow.Conversations
                     .GetAll()
                     .Where(c => c.ConversationId == conversationId)
@@ -47,7 +46,6 @@
                     .SingleOrDefaultAsync(cancellation)
                     ?? throw new KeyNotFoundException("Conversation not found");
 
-                // 2) persistimos el Message en BD
                 var msg = new Message
                 {
                     ConversationId = conversationId,
@@ -60,7 +58,6 @@
                 await _uow.Messages.AddAsync(msg, cancellation);
                 await _uow.SaveChangesAsync(cancellation);
 
-                // 3) llamamos a la Cloud API
                 var url = $"https://graph.facebook.com/v22.0/{_phoneNumberId}/messages";
                 var payload = new
                 {
@@ -78,7 +75,6 @@
                 var res = await _http.SendAsync(req, cancellation);
                 res.EnsureSuccessStatusCode();
 
-                // 4) notificamos por SignalR a los clientes suscritos a esta conversación
                 var dto = new
                 {
                     msg.MessageId,

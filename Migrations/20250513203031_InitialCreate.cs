@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CustomerService.API.Data.Migrations
+namespace CustomerService.API.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -29,8 +29,8 @@ namespace CustomerService.API.Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RoleName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysutcdatetime())"),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true, defaultValueSql: "(sysutcdatetime())"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true, defaultValueSql: "(sysutcdatetime())"),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
@@ -52,6 +52,27 @@ namespace CustomerService.API.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Companies", x => x.CompanyId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Menus",
+                schema: "auth",
+                columns: table => new
+                {
+                    MenuId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Url = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Index = table.Column<int>(type: "int", nullable: false),
+                    Icon = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysutcdatetime())"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true, defaultValueSql: "(sysutcdatetime())"),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Menus", x => x.MenuId);
                 });
 
             migrationBuilder.CreateTable(
@@ -180,6 +201,33 @@ namespace CustomerService.API.Data.Migrations
                 .Annotation("SqlServer:TemporalPeriodStartColumnName", "ValidFrom");
 
             migrationBuilder.CreateTable(
+                name: "RoleMenus",
+                schema: "auth",
+                columns: table => new
+                {
+                    MenuId = table.Column<int>(type: "int", nullable: false),
+                    RoleId = table.Column<int>(type: "int", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysutcdatetime())"),
+                    UpdateAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysutcdatetime())")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoleMenus", x => new { x.MenuId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_RoleMenus_Menus",
+                        column: x => x.MenuId,
+                        principalSchema: "auth",
+                        principalTable: "Menus",
+                        principalColumn: "MenuId");
+                    table.ForeignKey(
+                        name: "FK_RoleMenus_Roles",
+                        column: x => x.RoleId,
+                        principalSchema: "auth",
+                        principalTable: "AppRoles",
+                        principalColumn: "RoleId");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AuthTokens",
                 schema: "auth",
                 columns: table => new
@@ -219,6 +267,7 @@ namespace CustomerService.API.Data.Migrations
                     AssignedBy = table.Column<int>(type: "int", nullable: true),
                     AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Bot"),
+                    Initialized = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "(sysutcdatetime())"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -377,6 +426,20 @@ namespace CustomerService.API.Data.Migrations
                 column: "CompanyId");
 
             migrationBuilder.CreateIndex(
+                name: "UQ_RoleMenus_MenuIndex",
+                schema: "auth",
+                table: "Menus",
+                column: "Index",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_RoleMenus_MenuName",
+                schema: "auth",
+                table: "Menus",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Messages_ConversationId",
                 schema: "chat",
                 table: "Messages",
@@ -387,6 +450,12 @@ namespace CustomerService.API.Data.Migrations
                 schema: "chat",
                 table: "Messages",
                 column: "SenderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoleMenus_RoleId",
+                schema: "auth",
+                table: "RoleMenus",
+                column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_RoleId",
@@ -413,12 +482,20 @@ namespace CustomerService.API.Data.Migrations
                 schema: "auth");
 
             migrationBuilder.DropTable(
+                name: "RoleMenus",
+                schema: "auth");
+
+            migrationBuilder.DropTable(
                 name: "UserRoles",
                 schema: "auth");
 
             migrationBuilder.DropTable(
                 name: "Messages",
                 schema: "chat");
+
+            migrationBuilder.DropTable(
+                name: "Menus",
+                schema: "auth");
 
             migrationBuilder.DropTable(
                 name: "AppRoles",

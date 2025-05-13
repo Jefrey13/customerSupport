@@ -7,10 +7,6 @@ namespace CustomerService.API.Data.Context;
 
 public partial class CustomerSupportContext : DbContext
 {
-    public CustomerSupportContext()
-    {
-    }
-
     public CustomerSupportContext(DbContextOptions<CustomerSupportContext> options)
         : base(options)
     {
@@ -32,9 +28,13 @@ public partial class CustomerSupportContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
+    public virtual DbSet<Menu> Menus { get; set; }
+
+    public virtual DbSet<RoleMenu> MenuRoles { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=LAPTOP-N56GM63T;Database=CustomerSupportDB;Trusted_Connection=True;TrustServerCertificate=True");
+        => optionsBuilder.UseSqlServer("Server=DESKTOP-91LKTJV\\SQLEXPRESS;Database=CustomerSupportDB; TrustServerCertificate=true; Trusted_Connection=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,11 +47,31 @@ public partial class CustomerSupportContext : DbContext
             entity.HasIndex(e => e.RoleName, "UQ_AppRoles_RoleName").IsUnique();
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Description).HasMaxLength(200);
             entity.Property(e => e.RoleName).HasMaxLength(50);
             entity.Property(e => e.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
+        });
+
+        modelBuilder.Entity<Menu>(entity => {
+            entity.HasKey(m=> m.MenuId);
+
+            entity.ToTable("Menus", "auth");
+
+            entity.HasIndex(e => e.Name, "UQ_RoleMenus_MenuName").IsUnique();
+            entity.HasIndex(e => e.Index, "UQ_RoleMenus_MenuIndex").IsUnique();
+
+            entity.Property(e=> e.Description).HasMaxLength(255);
+            entity.Property(e=> e.Icon).HasMaxLength(255);
+            entity.Property(e=> e.Url).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Attachment>(entity =>
@@ -195,6 +215,25 @@ public partial class CustomerSupportContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserRoles_Users");
+        });
+
+        modelBuilder.Entity<RoleMenu>(entity =>
+        {
+            entity.HasKey(e => new { e.MenuId, e.RoleId });
+            entity.ToTable("RoleMenus", "auth");
+
+            entity.Property(e => e.AssignedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.UpdateAt).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.Role).WithMany(p => p.RoleMenus)
+            .HasForeignKey(d => d.RoleId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_RoleMenus_Roles");
+
+            entity.HasOne(d => d.Menu).WithMany(p => p.RoleMenus)
+            .HasForeignKey(p => p.MenuId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_RoleMenus_Menus");
         });
 
         OnModelCreatingPartial(modelBuilder);
