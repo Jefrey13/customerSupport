@@ -10,16 +10,16 @@ namespace CustomerService.API.Dtos.RequestDtos
         [Required, EmailAddress]
         public string Email { get; set; } = "";
 
-        [Required, MinLength(8), MaxLength(100)]
+        [Required, MinLength(3), MaxLength(100)]
         public string Password { get; set; } = "";
 
-        [Required]
-        public int CompanyId { get; set; }
+        public int CompanyId { get; set; } = 1;
 
-        [Phone]
         public string? Phone { get; set; }
 
         public string? Identifier { get; set; }
+
+        public List<int> RoleIds { get; set; } = new() { 1 };
 
         public string? ImageUrl { get; set; }
     }

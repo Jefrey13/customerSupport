@@ -5,7 +5,6 @@ using CustomerService.API.Dtos.RequestDtos;
 using CustomerService.API.Dtos.ResponseDtos;
 using CustomerService.API.Services.Interfaces;
 using CustomerService.API.Utils;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -45,7 +44,7 @@ namespace CustomerService.API.Controllers
         }
 
         [HttpPost(Name = "CreateUser")]
-        [SwaggerOperation(Summary = "Create a new user")]
+        [SwaggerOperation(Summary = "Create a new user (incluyendo sus roles)")]
         [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] CreateUserRequest req, CancellationToken ct = default)
@@ -56,7 +55,7 @@ namespace CustomerService.API.Controllers
         }
 
         [HttpPut("{id}", Name = "UpdateUser")]
-        [SwaggerOperation(Summary = "Update an existing user")]
+        [SwaggerOperation(Summary = "Update an existing user (y sus roles)")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -64,7 +63,6 @@ namespace CustomerService.API.Controllers
         {
             if (id != req.UserId)
                 return BadRequest(new ApiResponse<object>(null, "Mismatched user ID."));
-
             await _users.UpdateAsync(req, ct);
             return NoContent();
         }
@@ -86,7 +84,6 @@ namespace CustomerService.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(role))
                 return BadRequest(ApiResponse<object>.Fail("Debe especificar el parámetro 'role' para filtrar."));
-
             var agents = await _users.GetByRoleAsync(role, ct);
             return Ok(new ApiResponse<IEnumerable<AgentDto>>(agents, $"Usuarios con rol '{role}' obtenidos."));
         }
