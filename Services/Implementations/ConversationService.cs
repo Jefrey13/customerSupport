@@ -26,14 +26,13 @@ namespace CustomerService.API.Services.Implementations
             var conversations = await _uow.Conversations
                 .GetAll()
                 .Include(c => c.Messages)
+                .Include(c => c.ClientUser)
                 .ToListAsync(cancellation);
 
-            return conversations.Select(c => ToDto(c));
+            return conversations.Select(ToDto);
         }
 
-        public async Task<ConversationDto> StartAsync(
-            StartConversationRequest request,
-            CancellationToken cancellation = default)
+        public async Task<ConversationDto> StartAsync(StartConversationRequest request, CancellationToken cancellation = default)
         {
             var conv = new Conversation
             {
@@ -51,14 +50,14 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task<IEnumerable<ConversationDto>> GetPendingAsync(CancellationToken cancellation = default)
         {
-            // Usamos GetAll + filtro + Include para cargar mensajes
             var conversations = await _uow.Conversations
                 .GetAll()
                 .Where(c => c.Status == "PendingHuman" || c.Status == "Bot")
                 .Include(c => c.Messages)
+                .Include(c => c.ClientUser)
                 .ToListAsync(cancellation);
 
-            return conversations.Select(c => ToDto(c));
+            return conversations.Select(ToDto);
         }
 
         public async Task AssignAgentAsync(int conversationId, int agentUserId, CancellationToken cancellation = default)
@@ -84,11 +83,11 @@ namespace CustomerService.API.Services.Implementations
 
             var c = await _uow.Conversations
                 .GetAll()
-                .Include(x => x.Messages)
-                .SingleOrDefaultAsync(x => x.ConversationId == id, cancellation);
+                .Include(c => c.Messages)
+                .Include(c => c.ClientUser)
+                .SingleOrDefaultAsync(c => c.ConversationId == id, cancellation);
 
-            if (c == null) return null;
-            return ToDto(c);
+            return c is null ? null : ToDto(c);
         }
 
         public async Task CloseAsync(int conversationId, CancellationToken cancellation = default)
@@ -114,10 +113,9 @@ namespace CustomerService.API.Services.Implementations
                 Status = c.Status,
                 CreatedAt = c.CreatedAt,
                 AssignedAt = c.AssignedAt,
+                ContactName = c.ClientUser?.FullName ?? c.ClientUser?.Phone ?? "",
                 TotalMensajes = c.Messages.Count,
-                UltimaActividad = c.Messages.Any()
-                                  ? c.Messages.Max(m => m.CreatedAt)
-                                  : c.CreatedAt,
+                UltimaActividad = c.Messages.Any() ? c.Messages.Max(m => m.CreatedAt) : c.CreatedAt,
                 Duracion = DateTime.UtcNow - c.CreatedAt
             };
     }

@@ -10,9 +10,6 @@ using CustomerService.API.Services.Interfaces;
 
 namespace CustomerService.API.Services.Implementations
 {
-    /// <summary>
-    /// Implementa la lógica de negocio para adjuntos: subida y recuperación.
-    /// </summary>
     public class AttachmentService : IAttachmentService
     {
         private readonly IUnitOfWork _uow;

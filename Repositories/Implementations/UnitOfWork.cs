@@ -18,7 +18,9 @@ namespace CustomerService.API.Repositories.Implementations
             ICompanyRepository companyRepository,
             IConversationRepository conversationRepository,
             IMessageRepository messageRepository,
-            IAttachmentRepository attachmentRepository)
+            IAttachmentRepository attachmentRepository,
+            IRoleMenuRepository roleMenuRepository,
+            IMenuRepository menuRepository)
         {
             _context = context;
             Users = userRepository;
@@ -29,6 +31,8 @@ namespace CustomerService.API.Repositories.Implementations
             Conversations = conversationRepository;
             Messages = messageRepository;
             Attachments = attachmentRepository;
+            Menus = menuRepository;
+            RoleMenus = roleMenuRepository;
         }
 
         public IUserRepository Users { get; }
@@ -39,6 +43,9 @@ namespace CustomerService.API.Repositories.Implementations
         public IConversationRepository Conversations { get; }
         public IMessageRepository Messages { get; }
         public IAttachmentRepository Attachments { get; }
+
+        public IMenuRepository Menus { get; }
+        public IRoleMenuRepository RoleMenus { get; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellation = default) =>
             _context.SaveChangesAsync(cancellation);

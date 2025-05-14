@@ -17,10 +17,9 @@ namespace CustomerService.API.Dtos.RequestDtos
 
         public bool IsActive { get; set; }
 
-        [Required]
-        public int CompanyId { get; set; }
+      
+        public int? CompanyId { get; set; }
 
-        [Phone]
         public string? Phone { get; set; }
 
         public string? Identifier { get; set; }
@@ -28,5 +27,7 @@ namespace CustomerService.API.Dtos.RequestDtos
         public string? NewPassword { get; set; }
 
         public string? ImageUrl { get; set; }
+
+        public List<int> RoleIds { get; set; } = new() { 1 };
     }
 }

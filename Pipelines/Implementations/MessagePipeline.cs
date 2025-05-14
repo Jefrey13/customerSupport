@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CustomerService.API.Data.Context;
+using CustomerService.API.Dtos.ResponseDtos;
 using CustomerService.API.Models;
 using CustomerService.API.Pipelines.Interfaces;
 using CustomerService.API.Services.Interfaces;
@@ -44,70 +47,71 @@ namespace CustomerService.API.Pipelines.Implementations
             string? caption,
             CancellationToken ct = default)
         {
-            // 0) Normalizar y descartar vacíos
             text = (text ?? "").Trim();
             if (string.IsNullOrEmpty(text))
                 return;
 
-            // 1) Crea o recupera el usuario
-            var user = await _db.Users
-                                .FirstOrDefaultAsync(u => u.Phone == fromPhone, ct)
-                      ?? new User { Phone = fromPhone, CreatedAt = DateTime.UtcNow };
-
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Phone == fromPhone, ct)
+                       ?? new User { Phone = fromPhone, CreatedAt = DateTime.UtcNow };
             if (user.UserId == 0)
             {
                 _db.Users.Add(user);
                 await _db.SaveChangesAsync(ct);
             }
 
-            // 2) Crea o recupera la conversación activa
             var convo = await _db.Conversations
-                                 .FirstOrDefaultAsync(c => c.ClientUserId == user.UserId
-                                                        && c.Status != "Closed", ct)
-                      ?? new Conversation
-                      {
-                          ClientUserId = user.UserId,
-                          Status = "Bot",
-                          CreatedAt = DateTime.UtcNow,
-                          Initialized = false
-                      };
-
+                .FirstOrDefaultAsync(c => c.ClientUserId == user.UserId && c.Status != "Closed", ct)
+                        ?? new Conversation
+                        {
+                            ClientUserId = user.UserId,
+                            Status = "Bot",
+                            CreatedAt = DateTime.UtcNow,
+                            Initialized = false
+                        };
             if (convo.ConversationId == 0)
             {
                 _db.Conversations.Add(convo);
                 await _db.SaveChangesAsync(ct);
             }
 
-            // 2.a) Bienvenida única
             if (!convo.Initialized)
             {
                 convo.Initialized = true;
                 _db.Conversations.Update(convo);
                 await _db.SaveChangesAsync(ct);
 
-                // Notificar nueva conversación a la UI de agentes
-                await _hubContext.Clients.All
-                                 .SendAsync("ConversationCreated", new
-                                 {
-                                     convo.ConversationId,
-                                     convo.ClientUserId,
-                                     convo.Status,
-                                     convo.CreatedAt
-                                 }, ct);
+                var fullConvo = await _db.Conversations
+                    .Include(c => c.Messages)
+                    .Include(c => c.ClientUser)
+                    .SingleAsync(c => c.ConversationId == convo.ConversationId, ct);
 
-                // Saludo inicial vía WhatsApp
+                var convoDto = new ConversationDto
+                {
+                    ConversationId = fullConvo.ConversationId,
+                    CompanyId = fullConvo.CompanyId,
+                    ClientUserId = fullConvo.ClientUserId,
+                    AssignedAgent = fullConvo.AssignedAgent,
+                    Status = fullConvo.Status,
+                    CreatedAt = fullConvo.CreatedAt,
+                    AssignedAt = fullConvo.AssignedAt,
+                    ContactName = fullConvo.ClientUser?.FullName ?? fullConvo.ClientUser?.Phone ?? "",
+                    TotalMensajes = fullConvo.Messages.Count,
+                    UltimaActividad = fullConvo.Messages.Any()
+                                      ? fullConvo.Messages.Max(m => m.CreatedAt)
+                                      : fullConvo.CreatedAt,
+                    Duracion = DateTime.UtcNow - fullConvo.CreatedAt
+                };
+
+                await _hubContext.Clients.All.SendAsync("ConversationCreated", convoDto, ct);
+
                 await _whatsAppService.SendTextAsync(
                     convo.ConversationId,
                     BotUserId,
                     "¡Hola! Soy tu asistente de PCGroup S.A. ¿En qué puedo ayudarte?",
                     ct
                 );
-
-                // Si deseas cortar el flujo aquí:
-                // return;
             }
 
-            // 3) Persistir el mensaje entrante
             var incoming = new Message
             {
                 ConversationId = convo.ConversationId,
@@ -120,26 +124,52 @@ namespace CustomerService.API.Pipelines.Implementations
             _db.Messages.Add(incoming);
             await _db.SaveChangesAsync(ct);
 
-            // Notificar al grupo de SignalR
             await _hubContext.Clients
-                             .Group(convo.ConversationId.ToString())
-                             .SendAsync("ReceiveMessage", new
-                             {
-                                 Message = incoming,
-                                 Attachments = Array.Empty<object>()
-                             }, ct);
+                .Group(convo.ConversationId.ToString())
+                .SendAsync("ReceiveMessage", new
+                {
+                    Message = new
+                    {
+                        incoming.MessageId,
+                        incoming.ConversationId,
+                        incoming.SenderId,
+                        incoming.Content,
+                        incoming.MessageType,
+                        incoming.CreatedAt
+                    },
+                    Attachments = Array.Empty<object>()
+                }, ct);
 
-            // 4) Generar la respuesta con Gemini
-            var rawReply = await _geminiClient.GenerateContentAsync(_systemPrompt, text, ct);
-            var reply = rawReply.Trim();
+            if (convo.Status == "Bot")
+            {
+                var history = await _db.Messages
+                    .Where(m => m.ConversationId == convo.ConversationId)
+                    .OrderBy(m => m.CreatedAt)
+                    .Select(m => new
+                    {
+                        Role = m.SenderId == BotUserId ? "assistant" : "user",
+                        Content = m.Content!
+                    })
+                    .ToListAsync(ct);
 
-            // 5) **Solo una** llamada a SendTextAsync persistirá + notificará
-            await _whatsAppService.SendTextAsync(
-                convo.ConversationId,
-                BotUserId,
-                reply,
-                ct
-            );
+                var sb = new StringBuilder();
+                sb.AppendLine(_systemPrompt);
+                foreach (var msg in history)
+                    sb.Append(msg.Role == "user" ? "User: " : "Assistant: ")
+                      .AppendLine(msg.Content);
+                sb.Append("User: ").AppendLine(text).Append("Assistant: ");
+
+                var fullPrompt = sb.ToString();
+                var rawReply = await _geminiClient.GenerateContentAsync(fullPrompt, null, ct);
+                var reply = rawReply.Trim();
+
+                await _whatsAppService.SendTextAsync(
+                    convo.ConversationId,
+                    BotUserId,
+                    reply,
+                    ct
+                );
+            }
         }
     }
 }
