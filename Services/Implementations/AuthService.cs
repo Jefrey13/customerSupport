@@ -65,6 +65,7 @@ namespace CustomerService.API.Services.Implementations
                 Identifier = request.Identifier,
                 CreatedAt = DateTime.UtcNow
             };
+
             await _users.AddAsync(user, ct);
             await _uow.SaveChangesAsync(ct);
 
@@ -79,6 +80,7 @@ namespace CustomerService.API.Services.Implementations
                 RoleId = customerRole.RoleId,
                 AssignedAt = DateTime.UtcNow
             };
+
             await _usersRoles.AddAsync(userRole, ct);
             await _uow.SaveChangesAsync(ct);
 
@@ -261,8 +263,7 @@ namespace CustomerService.API.Services.Implementations
             var entity = await _tokens.GetByTokenAsync(request.Token, ct)
                        ?? throw new KeyNotFoundException("Invalid token.");
 
-            if (entity.TokenType != TokenType.PasswordReset.ToString()
-             || entity.Revoked
+            if (entity.TokenType != TokenType.Verification.ToString()
              || entity.ExpiresAt <= DateTime.UtcNow)
                 throw new ArgumentException("Invalid or expired token.");
 
@@ -301,7 +302,6 @@ namespace CustomerService.API.Services.Implementations
                        ?? throw new KeyNotFoundException("Invalid token.");
 
             if (entity.TokenType != TokenType.Verification.ToString()
-             || entity.Revoked
              || entity.ExpiresAt <= DateTime.UtcNow)
                 throw new ArgumentException("Invalid or expired token.");
 

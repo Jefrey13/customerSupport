@@ -10,8 +10,10 @@ using CustomerService.API.Models;
 using CustomerService.API.Repositories.Interfaces;
 using CustomerService.API.Services.Interfaces;
 using CustomerService.API.Utils;
+using k8s.KubeConfigModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using User = CustomerService.API.Models.User;
 
 namespace CustomerService.API.Services.Implementations
 {
@@ -23,8 +25,10 @@ namespace CustomerService.API.Services.Implementations
         private readonly IEmailService _email;
         private readonly JwtSettings _jwtSettings;
         private readonly ITokenService _jwt;
+        private readonly IAuthTokenRepository _tokens;
+
         public UserService(IUnitOfWork uow, IPasswordHasher hasher, IPresenceService presence,
-            IEmailService email, IOptions<JwtSettings> jwtOptions, ITokenService jwt)
+            IEmailService email, IOptions<JwtSettings> jwtOptions, ITokenService jwt, IAuthTokenRepository tokens)
         {
             _uow = uow ?? throw new ArgumentNullException(nameof(uow));
             _hasher = hasher ?? throw new ArgumentNullException(nameof(hasher));
@@ -32,6 +36,7 @@ namespace CustomerService.API.Services.Implementations
             _email = email ?? throw new ArgumentNullException(nameof(email));
             _jwt = jwt ?? throw new ArgumentNullException(nameof(jwt));
             _jwtSettings = jwtOptions?.Value ?? throw new ArgumentNullException(nameof(jwtOptions));
+            _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
         }
 
         public async Task<PagedResponse<UserDto>> GetAllAsync(PaginationParams @params, CancellationToken cancellation = default)
@@ -60,7 +65,7 @@ namespace CustomerService.API.Services.Implementations
                 .GroupBy(ur => ur.UserId)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.Select(ur => new RoleDto { RoleId = ur.RoleId, RoleName = ur.Role.RoleName }).ToList()
+                    g => g.Select(ur => new RoleDto { RoleId = ur.RoleId, RoleName = ur.Role.RoleName, Description = ur.Role.Description }).ToList()
                 );
 
             var dtos = users.Select(u =>
@@ -105,7 +110,7 @@ namespace CustomerService.API.Services.Implementations
                 .CountAsync(c => c.ClientUserId == u.UserId, cancellation);
 
             var roles = await _uow.UserRoles.GetRolesByUserIdAsync(u.UserId, cancellation);
-            var rolesDto = roles.Select(ur => new RoleDto { RoleId = ur.RoleId, RoleName = ur.Role.RoleName });
+            var rolesDto = roles.Select(ur => new RoleDto { RoleId = ur.RoleId, RoleName = ur.Role.RoleName, Description = ur.Role.Description });
 
             return new UserDto
             {
@@ -149,7 +154,7 @@ namespace CustomerService.API.Services.Implementations
             await _uow.Users.AddAsync(entity, cancellation);
             await _uow.SaveChangesAsync(cancellation);
 
-            if (request.RoleIds.Any())
+            if (request.RoleIds.Count > 0)
             {
                 foreach (var rid in request.RoleIds.Distinct())
                 {
@@ -163,10 +168,21 @@ namespace CustomerService.API.Services.Implementations
 
             var createdRoles = request.RoleIds.Any()
                 ? (await _uow.Roles.GetAll().Where(r => request.RoleIds.Contains(r.RoleId)).ToListAsync(cancellation))
-                    .Select(r => new RoleDto { RoleId = r.RoleId, RoleName = r.RoleName })
+                    .Select(r => new RoleDto { RoleId = r.RoleId, RoleName = r.RoleName, Description = r.Description })
                 : Enumerable.Empty<RoleDto>();
 
             var verifyToken = _jwt.GenerateRefreshToken();
+            var authEntity = new AuthToken
+            {
+                UserId = entity.UserId,
+                Token = verifyToken,
+                TokenType = TokenType.Verification.ToString(),
+                ExpiresAt = DateTime.UtcNow.AddHours(24),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _tokens.AddAsync(authEntity, cancellation);
+            await _uow.SaveChangesAsync(cancellation);
 
             // 4) Send verification email
             var link = $"http://localhost:5173/verify-account?token={Uri.EscapeDataString(verifyToken)}";

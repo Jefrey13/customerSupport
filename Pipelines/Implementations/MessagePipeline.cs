@@ -37,7 +37,6 @@ namespace CustomerService.API.Pipelines.Implementations
             _hubContext = hubContext;
             _systemPrompt = config["Gemini:SystemPrompt"]!;
         }
-
         public async Task ProcessIncomingAsync(
             string fromPhone,
             string externalId,
@@ -61,13 +60,14 @@ namespace CustomerService.API.Pipelines.Implementations
 
             var convo = await _db.Conversations
                 .FirstOrDefaultAsync(c => c.ClientUserId == user.UserId && c.Status != "Closed", ct)
-                        ?? new Conversation
-                        {
-                            ClientUserId = user.UserId,
-                            Status = "Bot",
-                            CreatedAt = DateTime.UtcNow,
-                            Initialized = false
-                        };
+                    ?? new Conversation
+                    {
+                        ClientUserId = user.UserId,
+                        Status = "Bot",
+                        CreatedAt = DateTime.UtcNow,
+                        Initialized = false
+                    };
+
             if (convo.ConversationId == 0)
             {
                 _db.Conversations.Add(convo);
@@ -107,7 +107,7 @@ namespace CustomerService.API.Pipelines.Implementations
                 await _whatsAppService.SendTextAsync(
                     convo.ConversationId,
                     BotUserId,
-                    "¡Hola! Soy tu asistente de PCGroup S.A. ¿En qué puedo ayudarte?",
+                    "¡Hola! Soy tu asistente AI de PCGroup S.A. ¿En qué puedo ayudarte?",
                     ct
                 );
             }
@@ -121,6 +121,7 @@ namespace CustomerService.API.Pipelines.Implementations
                 MessageType = "Text",
                 CreatedAt = DateTime.UtcNow
             };
+
             _db.Messages.Add(incoming);
             await _db.SaveChangesAsync(ct);
 
@@ -140,6 +141,7 @@ namespace CustomerService.API.Pipelines.Implementations
                     Attachments = Array.Empty<object>()
                 }, ct);
 
+            // Múltiples respuestas del bot mientras el estado sea "Bot"
             if (convo.Status == "Bot")
             {
                 var history = await _db.Messages
@@ -147,7 +149,7 @@ namespace CustomerService.API.Pipelines.Implementations
                     .OrderBy(m => m.CreatedAt)
                     .Select(m => new
                     {
-                        Role = m.SenderId == BotUserId ? "assistant" : "user",
+                        Role = m.SenderId == BotUserId ? "Support" : "user",
                         Content = m.Content!
                     })
                     .ToListAsync(ct);
@@ -155,12 +157,12 @@ namespace CustomerService.API.Pipelines.Implementations
                 var sb = new StringBuilder();
                 sb.AppendLine(_systemPrompt);
                 foreach (var msg in history)
-                    sb.Append(msg.Role == "user" ? "User: " : "Assistant: ")
+                    sb.Append(msg.Role == "ser" ? "User: " : "Support: ")
                       .AppendLine(msg.Content);
-                sb.Append("User: ").AppendLine(text).Append("Assistant: ");
+                sb.Append("User: ").AppendLine(text).Append("Support: ");
 
                 var fullPrompt = sb.ToString();
-                var rawReply = await _geminiClient.GenerateContentAsync(fullPrompt, null, ct);
+                var rawReply = await _geminiClient.GenerateContentAsync(fullPrompt, "", ct);
                 var reply = rawReply.Trim();
 
                 await _whatsAppService.SendTextAsync(
@@ -169,7 +171,20 @@ namespace CustomerService.API.Pipelines.Implementations
                     reply,
                     ct
                 );
+
+                // Guardar la respuesta del bot en la base de datos
+                var botMessage = new Message
+                {
+                    ConversationId = convo.ConversationId,
+                    SenderId = BotUserId,
+                    Content = reply,
+                    MessageType = "Text",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _db.Messages.Add(botMessage);
+                await _db.SaveChangesAsync(ct);
             }
         }
+
     }
 }

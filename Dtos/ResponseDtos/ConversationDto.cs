@@ -7,11 +7,14 @@ namespace CustomerService.API.Dtos.ResponseDtos
         public int ConversationId { get; set; }
         public int? CompanyId { get; set; }
         public int? ClientUserId { get; set; }
+        public string? ClientUserName { get; set; }
         public int? AssignedAgent { get; set; }
+        public string? AssignedAgentName { get; set; }
         public string Status { get; set; } = "";
         public DateTime CreatedAt { get; set; }
         public DateTime? AssignedAt { get; set; }
         public string? ContactName { get; set; } = "";
+        public string? ContactNumber { get; set; } = "";
         public int TotalMensajes { get; set; }
         public DateTime UltimaActividad { get; set; }
         public TimeSpan Duracion { get; set; }

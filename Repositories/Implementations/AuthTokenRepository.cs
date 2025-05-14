@@ -11,12 +11,22 @@ namespace CustomerService.API.Repositories.Implementations
 
         public async Task<AuthToken?> GetByTokenAsync(string token, CancellationToken cancellation = default)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                throw new ArgumentException("El token no puede ser vacío.", nameof(token));
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token))
+                    throw new ArgumentException("El token no puede ser vacío.", nameof(token));
 
-            return await _dbSet
-                .AsNoTracking()
-                .SingleOrDefaultAsync(t => t.Token == token, cancellation);
+                var result = await _dbSet
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(t => t.Token == token, cancellation);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw new Exception("No se ha podido acceder a la al token.");
+            }
         }
 
         public async Task<IEnumerable<AuthToken>> GetActiveTokensAsync(int userId, CancellationToken cancellation = default)
