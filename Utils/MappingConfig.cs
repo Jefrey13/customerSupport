@@ -43,7 +43,7 @@ namespace CustomerService.API.Utils
                 .Map(d => d.Address, s => s.Address)
                 .Map(d => d.CreatedAt, s => s.CreatedAt);
 
-            config.NewConfig<Message, MessageDto>();
+            config.NewConfig<Models.Message, MessageDto>();
         }
     }
 }

@@ -22,6 +22,7 @@ namespace CustomerService.API.Services.Implementations
         private readonly IHubContext<ChatHub> _hub;
         private readonly string _token;
         private readonly string _phoneNumberId;
+        public readonly string _version;
 
         public WhatsAppService(
             HttpClient http,
@@ -34,6 +35,7 @@ namespace CustomerService.API.Services.Implementations
             _hub = hubContext;
             _token = config["WhatsApp:Token"]!;
             _phoneNumberId = config["WhatsApp:PhoneNumberId"]!;
+            _version = config["WhatsApp:ApiVersion"];
         }
 
         public async Task SendTextAsync(
@@ -56,12 +58,12 @@ namespace CustomerService.API.Services.Implementations
                 Content = text,
                 MessageType = "Text",
                 CreatedAt = DateTime.UtcNow,
-                ExternalId = Guid.NewGuid().ToString()
+                ExternalId = Guid.NewGuid().ToString() // Validación no duplicar el mismo mensaje en la db.
             };
             await _uow.Messages.AddAsync(msg, cancellation);
             await _uow.SaveChangesAsync(cancellation);
 
-            var url = $"https://graph.facebook.com/v22.0/{_phoneNumberId}/messages";
+            var url = $"https://graph.facebook.com/{_version}/{_phoneNumberId}/messages";
             var payload = new
             {
                 messaging_product = "whatsapp",
@@ -94,7 +96,7 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task SendTextAsync(string toPhone, string text)
         {
-            var url = $"https://graph.facebook.com/v22.0/{_phoneNumberId}/messages";
+            var url = $"https://graph.facebook.com/{_version}/{_phoneNumberId}/messages";
             var payload = new
             {
                 messaging_product = "whatsapp",
@@ -114,7 +116,7 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task<string> UploadMediaAsync(byte[] data, string mimeType)
         {
-            var url = $"https://graph.facebook.com/v22.0/{_phoneNumberId}/messages";
+            var url = $"https://graph.facebook.com/{_version}/{_phoneNumberId}/messages";
 
             using var content = new MultipartFormDataContent();
             content.Add(new ByteArrayContent(data), "file", "upload");
@@ -132,7 +134,7 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task SendMediaAsync(string toPhone, string mediaId, string mimeType, string? caption = null)
         {
-            var url = $"https://graph.facebook.com/v22.0/{_phoneNumberId}/messages";
+            var url = $"https://graph.facebook.com/{_version}/{_phoneNumberId}/messages";
 
             object payload = mimeType.StartsWith("image/")
                 ? new

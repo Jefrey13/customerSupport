@@ -260,12 +260,11 @@ namespace CustomerService.API.Services.Implementations
 
         public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
         {
-            var entity = await _tokens.GetByTokenAsync(request.Token, ct)
-                       ?? throw new KeyNotFoundException("Invalid token.");
+            var entity = await _tokens.GetByTokenAsync(request.Token, ct);
 
-            if (entity.TokenType != TokenType.Verification.ToString()
-             || entity.ExpiresAt <= DateTime.UtcNow)
-                throw new ArgumentException("Invalid or expired token.");
+            //if (entity.TokenType != TokenType.Verification.ToString()
+            // || entity.ExpiresAt <= DateTime.UtcNow)
+            //    throw new ArgumentException("Invalid or expired token.");
 
             var user = await _users.GetByIdAsync(entity.UserId, ct)
                      ?? throw new KeyNotFoundException("User not found.");

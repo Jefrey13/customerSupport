@@ -63,42 +63,48 @@ namespace CustomerService.API.Controllers
         [Consumes("application/json")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ReceiveAsync([FromBody] WhatsAppUpdateRequest update)
+        public async Task<IActionResult> ReceiveAsync([FromBody] WhatsAppUpdateRequest update, CancellationToken cancellation)
         {
-            if (update?.Entry == null || !update.Entry.Any())
+            if (update?.Entry == null || !update.Entry.Any() || update?.Entry.First().Changes.First().Value.Messages.Count() <= 0)
                 return BadRequest(ApiResponse<object>.Fail("Invalid payload structure."));
 
-            // Tomar el primer cambio
-            var change = update.Entry
-                               .First()
-                               .Changes
-                               .First()
-                               .Value;
+            //// Tomar el primer cambio
+            //var change = update.Entry
+            //                   .First()
+            //                   .Changes
+            //                   .First()
+            //                   .Value;
 
-            // Procesar solo si hay mensajes entrantes
-            if (change.Messages != null && change.Messages.Any())
-            {
-                var msg = change.Messages.First();
-                var from = msg.From;
-                var extId = msg.MessageId;                       
-                var text = msg.Text?.Body;
-                var mediaId = msg.Image?.Id
-                              ?? msg.Video?.Id
-                              ?? msg.Document?.Id;
-                var mime = msg.Image != null ? "image"
-                              : msg.Video != null ? "video"
-                              : msg.Document != null ? "document"
-                              : null;
-                var caption = msg.Caption;
+            //// Procesar solo si hay mensajes entrantes
+            //if (change.Messages != null && change.Messages.Any())
+            //{
+            //    var msg = change.Messages.First();
+            //    var from = msg.From;
+            //    var extId = msg.MessageId;                       
+            //    var text = msg.Text?.Body;
+            //    var mediaId = msg.Image?.Id
+            //                  ?? msg.Video?.Id
+            //                  ?? msg.Document?.Id;
+            //    var mime = msg.Image != null ? "image"
+            //                  : msg.Video != null ? "video"
+            //                  : msg.Document != null ? "document"
+            //                  : null;
+            //    var caption = msg.Caption;
 
-                await _pipeline.ProcessIncomingAsync(
-                    from,
-                    extId,
-                    text,
-                    mediaId,
-                    mime,
-                    caption);
-            }
+            //    await _pipeline.ProcessIncomingAsync(
+            //        from,
+            //        extId,
+            //        text,
+            //        mediaId,
+            //        mime,
+            //        caption);
+            //}
+
+            await _pipeline.ProcessIncomingAsync
+                (
+                 update.Entry.First().Changes.First().Value,
+                 cancellation
+                );
 
             return Ok(new ApiResponse<object>(
                 data: null,

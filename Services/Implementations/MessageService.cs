@@ -28,7 +28,7 @@ namespace CustomerService.API.Services.Implementations
             if (string.IsNullOrWhiteSpace(request.MessageType))
                 throw new ArgumentException("MessageType is required.", nameof(request.MessageType));
 
-            var msg = new Message
+            var msg = new Models.Message
             {
                 ConversationId = request.ConversationId,
                 SenderId = request.SenderId,

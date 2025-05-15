@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using CustomerService.API.Dtos.RequestDtos;
 
 namespace CustomerService.API.Pipelines.Interfaces
 {
@@ -8,9 +9,11 @@ namespace CustomerService.API.Pipelines.Interfaces
     /// </summary>
     public interface IMessagePipeline
     {
-        Task ProcessIncomingAsync(string fromPhone, string externalId,
-                          string? text, string? mediaId,
-                          string? mimeType, string? caption,
-                          CancellationToken ct = default);
+        //Task ProcessIncomingAsync(string fromPhone, string externalId,
+        //                  string? text, string? mediaId,
+        //                  string? mimeType, string? caption,
+        //                  CancellationToken ct = default);
+        Task ProcessIncomingAsync(ChangeValue value, CancellationToken ct = default);
+
     }
 }
