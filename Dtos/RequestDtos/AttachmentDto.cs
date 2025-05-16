@@ -1,4 +1,6 @@
-﻿namespace CustomerService.API.Dtos.ResponseDtos
+﻿using System;
+
+namespace CustomerService.API.Dtos.ResponseDtos
 {
     public class AttachmentDto
     {
@@ -8,5 +10,6 @@
         public string? FileName { get; set; }
         public string? MimeType { get; set; }
         public string? MediaUrl { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

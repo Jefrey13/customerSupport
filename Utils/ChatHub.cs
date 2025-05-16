@@ -16,5 +16,8 @@ namespace CustomerService.API.Utils
 
         public Task BroadcastConversationCreated(object conversationDto) =>
             Clients.All.SendAsync("ConversationCreated", conversationDto);
+
+        public Task SendMessageStatusChanged(string conversationId, object statusDto) =>
+            Clients.Group(conversationId).SendAsync("MessageStatusChanged", statusDto);
     }
 }

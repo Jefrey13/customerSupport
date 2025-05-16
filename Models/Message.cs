@@ -1,26 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CustomerService.API.Models;
-
-public partial class Message
+namespace CustomerService.API.Models
 {
-    public int MessageId { get; set; }
+    public partial class Message
+    {
+        public int MessageId { get; set; }
+        public int ConversationId { get; set; }
+        public int SenderId { get; set; }
+        public string? Content { get; set; }
+        public string ExternalId { get; set; } = "";
+        public string MessageType { get; set; } = null!;
+        public DateTime CreatedAt { get; set; }
 
-    public int ConversationId { get; set; }
+        // Propiedades para tracking de estados
+        public string Status { get; set; } = "sent";
+        public DateTime? DeliveredAt { get; set; }
+        public DateTime? ReadAt { get; set; }
 
-    public int SenderId { get; set; }
-
-    public string? Content { get; set; }
-    public string ExternalId { get; set; } = "";
-
-    public string MessageType { get; set; } = null!;
-
-    public DateTime CreatedAt { get; set; }
-
-    public virtual ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
-
-    public virtual Conversation Conversation { get; set; } = null!;
-
-    public virtual User Sender { get; set; } = null!;
+        public virtual ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
+        public virtual Conversation Conversation { get; set; } = null!;
+        public virtual User Sender { get; set; } = null!;
+    }
 }

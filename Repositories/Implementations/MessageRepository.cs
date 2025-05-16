@@ -1,4 +1,9 @@
-﻿using CustomerService.API.Data.Context;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CustomerService.API.Data.Context;
 using CustomerService.API.Models;
 using CustomerService.API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +25,16 @@ namespace CustomerService.API.Repositories.Implementations
                 .Include(m => m.Attachments)
                 .OrderBy(m => m.CreatedAt)
                 .ToListAsync(cancellation);
+        }
+
+        public async Task<Message?> GetByExternalIdAsync(string externalId, CancellationToken cancellation = default)
+        {
+            if (string.IsNullOrWhiteSpace(externalId))
+                throw new ArgumentException("El externalId no puede estar vacío.", nameof(externalId));
+
+            return await _dbSet
+                .AsNoTracking()
+                .SingleOrDefaultAsync(m => m.ExternalId == externalId, cancellation);
         }
     }
 }

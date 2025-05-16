@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -17,12 +18,13 @@ namespace CustomerService.API.Services.Implementations
 {
     public class WhatsAppService : IWhatsAppService
     {
+        private const int BotUserId = 1;
         private readonly HttpClient _http;
         private readonly IUnitOfWork _uow;
         private readonly IHubContext<ChatHub> _hub;
         private readonly string _token;
         private readonly string _phoneNumberId;
-        public readonly string _version;
+        private readonly string _version;
 
         public WhatsAppService(
             HttpClient http,
@@ -35,7 +37,7 @@ namespace CustomerService.API.Services.Implementations
             _hub = hubContext;
             _token = config["WhatsApp:Token"]!;
             _phoneNumberId = config["WhatsApp:PhoneNumberId"]!;
-            _version = config["WhatsApp:ApiVersion"];
+            _version = config["WhatsApp:ApiVersion"]!;
         }
 
         public async Task SendTextAsync(
@@ -58,7 +60,7 @@ namespace CustomerService.API.Services.Implementations
                 Content = text,
                 MessageType = "Text",
                 CreatedAt = DateTime.UtcNow,
-                ExternalId = Guid.NewGuid().ToString() // Validación no duplicar el mismo mensaje en la db.
+                ExternalId = Guid.NewGuid().ToString()
             };
             await _uow.Messages.AddAsync(msg, cancellation);
             await _uow.SaveChangesAsync(cancellation);
@@ -117,14 +119,12 @@ namespace CustomerService.API.Services.Implementations
         public async Task<string> UploadMediaAsync(byte[] data, string mimeType)
         {
             var url = $"https://graph.facebook.com/{_version}/{_phoneNumberId}/messages";
-
             using var content = new MultipartFormDataContent();
             content.Add(new ByteArrayContent(data), "file", "upload");
             content.Add(new StringContent("whatsapp"), "messaging_product");
 
             using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-
             var res = await _http.SendAsync(req);
             res.EnsureSuccessStatusCode();
 
@@ -135,7 +135,6 @@ namespace CustomerService.API.Services.Implementations
         public async Task SendMediaAsync(string toPhone, string mediaId, string mimeType, string? caption = null)
         {
             var url = $"https://graph.facebook.com/{_version}/{_phoneNumberId}/messages";
-
             object payload = mimeType.StartsWith("image/")
                 ? new
                 {
@@ -165,9 +164,86 @@ namespace CustomerService.API.Services.Implementations
                 Content = JsonContent.Create(payload)
             };
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-
             var res = await _http.SendAsync(req);
             res.EnsureSuccessStatusCode();
+        }
+
+        public async Task SendMediaAsync(
+            int conversationId,
+            int senderId,
+            byte[] file,
+            string filename,
+            string mimeType,
+            string? caption = null,
+            CancellationToken cancellation = default)
+        {
+            var convo = await _uow.Conversations
+                .GetAll()
+                .Where(c => c.ConversationId == conversationId)
+                .Select(c => new { c.ConversationId, Phone = c.ClientUser!.Phone })
+                .SingleOrDefaultAsync(cancellation)
+                ?? throw new KeyNotFoundException("Conversation not found");
+
+            var externalId = Guid.NewGuid().ToString();
+            var msg = new Message
+            {
+                ConversationId = conversationId,
+                SenderId = senderId,
+                Content = caption,
+                MessageType = "Media",
+                CreatedAt = DateTime.UtcNow,
+                ExternalId = externalId
+            };
+            await _uow.Messages.AddAsync(msg, cancellation);
+            await _uow.SaveChangesAsync(cancellation);
+
+            var mediaId = await UploadMediaAsync(file, mimeType);
+
+            var attachment = new Attachment
+            {
+                MessageId = msg.MessageId,
+                MediaId = mediaId,
+                FileName = filename,
+                MimeType = mimeType,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _uow.Attachments.AddAsync(attachment, cancellation);
+            await _uow.SaveChangesAsync(cancellation);
+
+            await SendMediaAsync(convo.Phone, mediaId, mimeType, caption);
+
+            var dto = new
+            {
+                Message = new
+                {
+                    msg.MessageId,
+                    msg.ConversationId,
+                    msg.SenderId,
+                    msg.Content,
+                    msg.MessageType,
+                    msg.CreatedAt,
+                    msg.Status,
+                    msg.DeliveredAt,
+                    msg.ReadAt
+                },
+                Attachments = new[]
+                {
+                    new
+                    {
+                        attachment.AttachmentId,
+                        attachment.MessageId,
+                        attachment.MediaId,
+                        attachment.FileName,
+                        attachment.MimeType,
+                        attachment.MediaUrl,
+                        attachment.CreatedAt
+                    }
+                }
+            };
+
+            await _hub.Clients
+                .Group(conversationId.ToString())
+                .SendAsync("ReceiveMessage", dto, cancellation);
         }
 
         private class MediaUploadResponse
